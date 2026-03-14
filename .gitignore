@@ -1,0 +1,40 @@
+/.DS_Store
+/.env
+/.env.*.local
+/.idea/
+/.vscode/
+openai_apikey
+
+# Node / Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.vite/
+/frontend/.eslintcache
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+/frontend/pnpm-debug.log*
+/frontend/coverage/
+
+# Ruby / Rails (Backend)
+/backend/log/
+/backend/tmp/
+/backend/storage/
+/backend/.bundle/
+/backend/vendor/bundle/
+/backend/public/assets/
+/backend/public/packs/
+/backend/public/packs-test/
+/backend/config/master.key
+/backend/node_modules/
+/backend/.env
+/backend/.env.*.local
+/backend/npm-debug.log*
+/backend/yarn-debug.log*
+/backend/yarn-error.log*
+/backend/pnpm-debug.log*
+/backend/db/*.sqlite3
+/backend/db/*.sqlite3-journal
+
+# Misc
+*.log
