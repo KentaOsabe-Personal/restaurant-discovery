@@ -32,10 +32,10 @@ development:
 test:
   <<: *default
   database: restaurant_discovery_test
-  username: <%= ENV["TEST_DATABASE_USERNAME"] || "root" %>
-  password: <%= ENV["TEST_DATABASE_PASSWORD"] || ENV["MYSQL_ROOT_PASSWORD"] || "rootpassword" %>
-  host: <%= ENV["TEST_DATABASE_HOST"] || "db" %>
-  port: <%= ENV["TEST_DATABASE_PORT"] || 3306 %>
+  username: app
+  password: password
+  host: db
+  port: 3306
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
