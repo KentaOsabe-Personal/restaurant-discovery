@@ -120,9 +120,20 @@ RSpec.describe QueryParserService do
           a_request(:post, openai_endpoint).with { |req|
             body = JSON.parse(req.body)
             rf = body["response_format"]
+            schema = rf.dig("json_schema", "schema")
+            props = schema["properties"]
+
             rf["type"] == "json_schema" &&
               rf["json_schema"]["name"] == "parsed_query" &&
-              rf["json_schema"]["strict"] == true
+              rf["json_schema"]["strict"] == true &&
+              schema["required"].sort == %w[area genre keyword price_level] &&
+              schema["additionalProperties"] == false &&
+              props["area"]["type"] == %w[string null] &&
+              props["genre"]["type"] == %w[string null] &&
+              props["keyword"]["type"] == %w[string null] &&
+              props["price_level"]["type"] == %w[string null] &&
+              props["price_level"]["enum"].include?("PRICE_LEVEL_FREE") &&
+              props["price_level"]["enum"].include?("PRICE_LEVEL_VERY_EXPENSIVE")
           }
         ).to have_been_made
       end
