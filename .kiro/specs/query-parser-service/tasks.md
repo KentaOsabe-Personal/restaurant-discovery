@@ -6,7 +6,7 @@
   - OpenAI API エラーをラップするカスタム例外クラスを作成する（StandardError を継承）
   - _Requirements: 3.3, 4.1, 4.2, 4.3, 5.3_
 
-- [ ] 2. QueryParserService のコア実装
+- [x] 2. QueryParserService のコア実装
   - OpenAI クライアントを初期化し、API キーをマウントされたファイルから読み取る
   - Chat Completions API を JSON Schema モード（Structured Outputs）で呼び出す処理を実装する
   - 自然文からエリア・ジャンル・価格帯・キーワードを抽出するシステムプロンプトを日本語で設計する（具体例を含める）
