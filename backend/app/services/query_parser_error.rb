@@ -1,0 +1,2 @@
+class QueryParserError < StandardError
+end
