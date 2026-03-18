@@ -1,0 +1,2 @@
+class GooglePlacesError < StandardError
+end
