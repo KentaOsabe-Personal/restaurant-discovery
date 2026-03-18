@@ -24,7 +24,14 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          show_full_output: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            PR #${{ github.event.pull_request.number }} のコードレビューを実施してください（リポジトリ: ${{ github.repository }}）。
+
+            手順:
+            1. `gh pr diff ${{ github.event.pull_request.number }}` で変更内容を確認する
+            2. コード品質・バグ・セキュリティ・テストカバレッジ・設計の観点でレビューする
+            3. `gh pr comment ${{ github.event.pull_request.number }} --body "..."` で必ずコメントを投稿する
+
+            **必須**: コメントは問題の有無にかかわらず必ず投稿すること。
+            問題がある場合は具体的な指摘事項と改善提案を含め、問題がない場合は「LGTM」とレビュー内容の要約を記載すること。
