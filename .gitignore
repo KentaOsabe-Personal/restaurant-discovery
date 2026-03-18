@@ -4,6 +4,7 @@
 /.idea/
 /.vscode/
 openai_apikey
+google_places_apikey
 
 # Node / Frontend
 /frontend/node_modules/
