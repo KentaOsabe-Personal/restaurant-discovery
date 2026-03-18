@@ -30,6 +30,7 @@ services:
     volumes:
       - ./backend:/rails
       - bundle_data:/usr/local/bundle
+      - ./google_places_apikey:/google_places_apikey:ro
     depends_on:
       db:
         condition: service_healthy
