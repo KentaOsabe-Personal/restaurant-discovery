@@ -6,6 +6,9 @@
 openai_apikey
 google_places_apikey
 
+# Claude Code local settings (user-specific, not for CI)
+.claude/settings.local.json
+
 # Node / Frontend
 /frontend/node_modules/
 /frontend/dist/
