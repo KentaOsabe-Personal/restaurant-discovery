@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. (P) 型定義モジュールの実装
+- [x] 1. (P) 型定義モジュールの実装
   - `src/types/search.ts` を新規作成し、バックエンドとの通信契約を TypeScript 型として定義する
   - `SearchRequest`（クエリ文字列を持つリクエスト型）を export する
   - `Recommendation`（店舗名・評価・価格帯・住所・Google Maps URL・写真・営業時間・推薦理由のフィールドを持つ型）を export する。省略可能なフィールドは `| null` で表現し、オプショナル記法（`?`）は使用しない
