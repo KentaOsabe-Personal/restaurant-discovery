@@ -1,12 +1,12 @@
 # Implementation Plan
 
-- [ ] 1. SearchController にエラーハンドリング基盤を追加する
-- [ ] 1.1 (P) サービス固有エラーを 502 に変換する `rescue_from` を定義する
+- [x] 1. SearchController にエラーハンドリング基盤を追加する
+- [x] 1.1 (P) サービス固有エラーを 502 に変換する `rescue_from` を定義する
   - QueryParserError・GooglePlacesError・RecommendationError の 3 クラスを一括で 502 にマッピングする
   - エラーレスポンスは `{ error: exception.message }` の JSON 形式で返す
   - _Requirements: 4.1, 4.2, 4.3_
 
-- [ ] 1.2 (P) 予期しない例外を 500 に変換する `rescue_from` を定義する
+- [x] 1.2 (P) 予期しない例外を 500 に変換する `rescue_from` を定義する
   - StandardError を捕捉し 500 を返す
   - `Rails.logger.error` でクラス名とメッセージをログに出力する
   - エラーレスポンスは `{ error: "内部エラーが発生しました" }` の固定文言で返す

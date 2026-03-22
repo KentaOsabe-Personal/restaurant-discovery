@@ -1,5 +1,14 @@
 module Api
   class SearchController < BaseController
+    rescue_from QueryParserError, GooglePlacesError, RecommendationError do |exception|
+      render json: { error: exception.message }, status: :bad_gateway
+    end
+
+    rescue_from StandardError do |exception|
+      Rails.logger.error "#{exception.class}: #{exception.message}"
+      render json: { error: "内部エラーが発生しました" }, status: :internal_server_error
+    end
+
     def create
       query = params[:query]
 

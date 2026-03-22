@@ -22,6 +22,47 @@ RSpec.describe "POST /api/search", type: :request do
     end
   end
 
+  describe "エラーハンドリング" do
+    it "QueryParserError が発生したとき 502 を返す" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_raise(QueryParserError, "query parser failed")
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response).to have_http_status(:bad_gateway)
+    end
+
+    it "QueryParserError が発生したときエラー JSON を返す" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_raise(QueryParserError, "query parser failed")
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response.parsed_body["error"]).to eq("query parser failed")
+    end
+
+    it "GooglePlacesError が発生したとき 502 を返す" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return({ area: "渋谷", genre: "イタリアン", price_level: nil, keyword: nil })
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_raise(GooglePlacesError, "places api failed")
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response).to have_http_status(:bad_gateway)
+    end
+
+    it "RecommendationError が発生したとき 502 を返す" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return({ area: "渋谷", genre: "イタリアン", price_level: nil, keyword: nil })
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return([ { name: "レストランA" } ])
+      allow_any_instance_of(RecommendationService).to receive(:call).and_raise(RecommendationError, "recommendation failed")
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response).to have_http_status(:bad_gateway)
+    end
+
+    it "予期しない StandardError が発生したとき 500 を返す" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_raise(RuntimeError, "unexpected error")
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response).to have_http_status(:internal_server_error)
+    end
+
+    it "予期しない StandardError が発生したとき固定エラー JSON を返す" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_raise(RuntimeError, "unexpected error")
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response.parsed_body["error"]).to eq("内部エラーが発生しました")
+    end
+  end
+
   describe "バリデーション（異常系）" do
     it "query が空文字のとき 422 を返す" do
       post "/api/search", params: { query: "" }.to_json, headers: valid_headers
