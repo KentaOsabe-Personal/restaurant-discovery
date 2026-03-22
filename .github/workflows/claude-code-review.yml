@@ -31,7 +31,38 @@ jobs:
             手順:
             1. `gh pr diff ${{ github.event.pull_request.number }}` で変更内容を確認する
             2. コード品質・バグ・セキュリティ・テストカバレッジ・設計の観点でレビューする
-            3. `gh pr comment ${{ github.event.pull_request.number }} --body "..."` で必ずコメントを投稿する
+            3. レビュー結果を `/tmp/review_result.md` に書き込む
 
-            **必須**: コメントは問題の有無にかかわらず必ず投稿すること。
-            問題がある場合は具体的な指摘事項と改善提案を含め、問題がない場合は「LGTM」とレビュー内容の要約を記載すること。
+            レビュー結果のフォーマット（必ず以下の構成で書くこと）:
+            ```
+            ## Claude Code Review
+
+            ### レビュー観点
+            - （確認した観点を箇条書きで列挙する）
+
+            ### 結果
+            （問題がある場合）**要修正あり**
+            - 指摘事項と改善提案を具体的に記載する
+
+            （問題がない場合）**LGTM ✅**
+            - 問題がないと判断した理由を具体的に記載する
+            ```
+
+            **必須**: 問題の有無にかかわらず必ず `/tmp/review_result.md` に書き込むこと。
+
+      - name: Post review comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f /tmp/review_result.md ]; then
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "$(cat /tmp/review_result.md)" \
+              --repo ${{ github.repository }}
+          else
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "## Claude Code Review
+
+            レビューを実施しましたが、結果ファイルの生成に失敗しました。ワークフローのログを確認してください。" \
+              --repo ${{ github.repository }}
+          fi
