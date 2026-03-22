@@ -1,0 +1,2 @@
+class RecommendationError < StandardError
+end
