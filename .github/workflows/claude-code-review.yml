@@ -24,7 +24,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          allowed_tools: "Bash"
+          settings: '{"permissions":{"allow":["Bash"]}}'
           prompt: |
             PR #${{ github.event.pull_request.number }} のコードレビューを実施してください（リポジトリ: ${{ github.repository }}）。
 
