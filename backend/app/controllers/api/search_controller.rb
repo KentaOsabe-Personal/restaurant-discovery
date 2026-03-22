@@ -1,12 +1,12 @@
 module Api
   class SearchController < BaseController
-    rescue_from QueryParserError, GooglePlacesError, RecommendationError do |exception|
-      render json: { error: exception.message }, status: :bad_gateway
-    end
-
     rescue_from StandardError do |exception|
       Rails.logger.error "#{exception.class}: #{exception.message}"
       render json: { error: "内部エラーが発生しました" }, status: :internal_server_error
+    end
+
+    rescue_from QueryParserError, GooglePlacesError, RecommendationError do |exception|
+      render json: { error: exception.message }, status: :bad_gateway
     end
 
     def create
@@ -22,12 +22,30 @@ module Api
         return
       end
 
+      parsed_conditions = QueryParserService.new.call(query)
+
+      places = GooglePlacesService.new.call(parsed_conditions)
+
+      if places.empty?
+        render json: {
+          recommendations: [],
+          parsed_conditions: {
+            area: parsed_conditions[:area],
+            genre: parsed_conditions[:genre],
+            price_level: parsed_conditions[:price_level]
+          }
+        }, status: :ok
+        return
+      end
+
+      recommendations = RecommendationService.new.call(places, query)
+
       render json: {
-        recommendations: [],
+        recommendations: recommendations,
         parsed_conditions: {
-          area: nil,
-          genre: nil,
-          price_level: nil
+          area: parsed_conditions[:area],
+          genre: parsed_conditions[:genre],
+          price_level: parsed_conditions[:price_level]
         }
       }, status: :ok
     end
