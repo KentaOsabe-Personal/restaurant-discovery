@@ -20,19 +20,19 @@ jobs:
           fetch-depth: 1
 
       - name: Run Claude Code Review
-        id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          allowed_tools: "Bash"
           prompt: |
             PR #${{ github.event.pull_request.number }} のコードレビューを実施してください（リポジトリ: ${{ github.repository }}）。
 
             手順:
             1. `gh pr diff ${{ github.event.pull_request.number }}` で変更内容を確認する
             2. コード品質・バグ・セキュリティ・テストカバレッジ・設計の観点でレビューする
-            3. 必ず Bash ツールで以下のコマンドを実行してレビュー結果を保存すること:
-               printf '%s' "ここにレビュー内容" > "${{ github.workspace }}/review_result.md"
+            3. 以下のフォーマットでレビュー結果を作成し、Bash ツールで `gh pr comment` を使って直接投稿すること:
+               gh pr comment ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body "ここにレビュー内容"
 
             レビュー結果のフォーマット（必ず以下の構成で書くこと）:
             ## Claude Code Review
@@ -47,22 +47,4 @@ jobs:
             （問題がない場合）**LGTM ✅**
             - 問題がないと判断した理由を具体的に記載する
 
-            **必須**: 問題の有無にかかわらず必ず `${{ github.workspace }}/review_result.md` に書き込むこと。
-
-      - name: Post review comment
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REVIEW_FILE: ${{ github.workspace }}/review_result.md
-        run: |
-          if [ -f "$REVIEW_FILE" ] && [ -s "$REVIEW_FILE" ]; then
-            gh pr comment ${{ github.event.pull_request.number }} \
-              --body "$(cat "$REVIEW_FILE")" \
-              --repo ${{ github.repository }}
-          else
-            gh pr comment ${{ github.event.pull_request.number }} \
-              --body "## Claude Code Review
-
-              レビューを実施しましたが、結果ファイルの生成に失敗しました。ワークフローのログを確認してください。" \
-              --repo ${{ github.repository }}
-          fi
+            **必須**: 問題の有無にかかわらず必ず `gh pr comment` でコメントを投稿すること。
