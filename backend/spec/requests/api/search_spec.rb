@@ -88,7 +88,7 @@ RSpec.describe "POST /api/search", type: :request do
     it "QueryParserError が発生したときエラー JSON を返す" do
       allow_any_instance_of(QueryParserService).to receive(:call).and_raise(QueryParserError, "query parser failed")
       post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
-      expect(response.parsed_body["error"]).to eq("query parser failed")
+      expect(response.parsed_body["error"]).to eq("外部サービスとの通信に失敗しました")
     end
 
     it "GooglePlacesError が発生したとき 502 を返す" do
@@ -102,7 +102,7 @@ RSpec.describe "POST /api/search", type: :request do
       allow_any_instance_of(QueryParserService).to receive(:call).and_return(parsed_conditions)
       allow_any_instance_of(GooglePlacesService).to receive(:call).and_raise(GooglePlacesError, "places api failed")
       post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
-      expect(response.parsed_body["error"]).to eq("places api failed")
+      expect(response.parsed_body["error"]).to eq("外部サービスとの通信に失敗しました")
     end
 
     it "RecommendationError が発生したとき 502 を返す" do
@@ -118,7 +118,7 @@ RSpec.describe "POST /api/search", type: :request do
       allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
       allow_any_instance_of(RecommendationService).to receive(:call).and_raise(RecommendationError, "recommendation failed")
       post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
-      expect(response.parsed_body["error"]).to eq("recommendation failed")
+      expect(response.parsed_body["error"]).to eq("外部サービスとの通信に失敗しました")
     end
 
     it "予期しない StandardError が発生したとき 500 を返す" do

@@ -6,7 +6,8 @@ module Api
     end
 
     rescue_from QueryParserError, GooglePlacesError, RecommendationError do |exception|
-      render json: { error: exception.message }, status: :bad_gateway
+      Rails.logger.error "#{exception.class}: #{exception.message}"
+      render json: { error: "外部サービスとの通信に失敗しました" }, status: :bad_gateway
     end
 
     def create
