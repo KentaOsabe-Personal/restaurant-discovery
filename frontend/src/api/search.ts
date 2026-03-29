@@ -1,0 +1,15 @@
+import type { SearchResponse } from '../types/search';
+
+export async function searchPlaces(query: string): Promise<SearchResponse> {
+  const response = await fetch('/api/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status}`);
+  }
+
+  return response.json() as Promise<SearchResponse>;
+}
