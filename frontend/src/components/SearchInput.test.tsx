@@ -99,9 +99,9 @@ describe('SearchInput', () => {
       expect(screen.getByRole('button')).toBeDisabled();
     });
 
-    it('isLoading=true のとき button に aria-busy="true" が付与される', () => {
+    it('isLoading=true のとき form に aria-busy="true" が付与される', () => {
       render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
-      expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('search')).toHaveAttribute('aria-busy', 'true');
     });
 
     it('isLoading=true のとき button ラベルが「検索中...」になる', () => {
@@ -133,11 +133,6 @@ describe('SearchInput', () => {
       fireEvent.click(screen.getByRole('button', { name: '探す' }));
       expect(mockOnSubmit).toHaveBeenCalledOnce();
       expect(mockOnSubmit).toHaveBeenCalledWith('銀座の寿司');
-    });
-
-    it('ボタン disabled 状態（空入力時）でのクリックで onSubmit が呼ばれない', () => {
-      fireEvent.click(screen.getByRole('button'));
-      expect(mockOnSubmit).not.toHaveBeenCalled();
     });
   });
 

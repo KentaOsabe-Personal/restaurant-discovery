@@ -16,7 +16,7 @@ function SearchInput({ onSubmit, isLoading = false }: SearchInputProps) {
   }
 
   return (
-    <form role="search" onSubmit={handleSubmit}>
+    <form role="search" onSubmit={handleSubmit} aria-busy={isLoading}>
       <input
         type="text"
         placeholder="渋谷でイタリアンなど"
@@ -25,7 +25,7 @@ function SearchInput({ onSubmit, isLoading = false }: SearchInputProps) {
         onChange={(e) => setQuery(e.target.value)}
         disabled={isLoading}
       />
-      <button type="submit" disabled={isSubmitDisabled} aria-busy={isLoading}>
+      <button type="submit" disabled={isSubmitDisabled}>
         {isLoading ? '検索中...' : '探す'}
       </button>
     </form>
