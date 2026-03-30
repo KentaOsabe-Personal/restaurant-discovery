@@ -1,6 +1,6 @@
 # 実装計画
 
-- [ ] 1. `Recommendation` 型から不要フィールドを削除してバックエンド API と型を一致させる
+- [x] 1. `Recommendation` 型から不要フィールドを削除してバックエンド API と型を一致させる
   - `frontend/src/types/search.ts` の `Recommendation` 型から `photo_url: string | null` フィールドを削除する
   - `Recommendation` 型から `opening_hours: OpeningHours | null` フィールドを削除する
   - `OpeningHours` 型定義を削除する

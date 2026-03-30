@@ -9,8 +9,6 @@ const mockSearchResponse: SearchResponse = {
       price_level: '¥¥',
       address: '東京都渋谷区1-1-1',
       google_maps_url: 'https://maps.google.com/?cid=123',
-      photo_url: null,
-      opening_hours: null,
       reason: 'コスパが良い',
     },
   ],
