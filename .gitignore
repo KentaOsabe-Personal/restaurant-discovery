@@ -21,7 +21,6 @@ google_places_apikey
 /frontend/pnpm-debug.log*
 /frontend/coverage/
 /frontend/.pnpm-store
-/frontend/pnpm-lock.yaml
 
 # Ruby / Rails (Backend)
 /backend/log/
