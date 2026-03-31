@@ -20,6 +20,8 @@ google_places_apikey
 /frontend/yarn-error.log*
 /frontend/pnpm-debug.log*
 /frontend/coverage/
+/frontend/.pnpm-store
+/frontend/pnpm-lock.yaml
 
 # Ruby / Rails (Backend)
 /backend/log/
