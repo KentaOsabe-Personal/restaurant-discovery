@@ -49,6 +49,12 @@ describe('PlaceCard', () => {
       expect(screen.getByRole('link')).toHaveAttribute('href', 'https://maps.google.com/?cid=123');
     });
 
+    it('https:// 以外の URL は # にフォールバックされる（XSS 対策）', () => {
+      render(<PlaceCard {...baseProps} google_maps_url="javascript:alert(1)" />);
+      const links = screen.getAllByRole('link');
+      expect(links[links.length - 1]).toHaveAttribute('href', '#');
+    });
+
     it('target="_blank" が付与される', () => {
       expect(screen.getByRole('link')).toHaveAttribute('target', '_blank');
     });
