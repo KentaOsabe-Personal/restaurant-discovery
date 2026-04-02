@@ -24,17 +24,19 @@ function App() {
   }
 
   return (
-    <div>
-      <h1>Restaurant Discovery</h1>
-      <SearchInput onSubmit={handleSearch} isLoading={isLoading} />
-      {isLoading && <p>読み込み中...</p>}
-      {error !== null && !isLoading && <p>{error}</p>}
-      {recommendations !== null && recommendations.length === 0 && !isLoading && error === null && (
-        <p>条件に合うレストランが見つかりませんでした</p>
-      )}
-      {recommendations !== null && recommendations.length > 0 && !isLoading && (
-        <RecommendationList recommendations={recommendations} />
-      )}
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
+        <SearchInput onSubmit={handleSearch} isLoading={isLoading} />
+        {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
+        {error !== null && !isLoading && <p className="text-red-600">{error}</p>}
+        {recommendations !== null && recommendations.length === 0 && !isLoading && error === null && (
+          <p className="text-center text-gray-400">条件に合うレストランが見つかりませんでした</p>
+        )}
+        {recommendations !== null && recommendations.length > 0 && !isLoading && (
+          <RecommendationList recommendations={recommendations} />
+        )}
+      </div>
     </div>
   );
 }

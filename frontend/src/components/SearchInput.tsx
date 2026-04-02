@@ -16,7 +16,7 @@ function SearchInput({ onSubmit, isLoading = false }: SearchInputProps) {
   }
 
   return (
-    <form role="search" onSubmit={handleSubmit} aria-busy={isLoading}>
+    <form role="search" onSubmit={handleSubmit} aria-busy={isLoading} className="flex w-full gap-2">
       <input
         type="text"
         placeholder="渋谷でイタリアンなど"
@@ -24,8 +24,13 @@ function SearchInput({ onSubmit, isLoading = false }: SearchInputProps) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         disabled={isLoading}
+        className="flex-1 border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
       />
-      <button type="submit" disabled={isSubmitDisabled}>
+      <button
+        type="submit"
+        disabled={isSubmitDisabled}
+        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
         {isLoading ? '検索中...' : '探す'}
       </button>
     </form>
