@@ -23,9 +23,11 @@ function PlaceCard({ name, rating, price_level, address, google_maps_url, reason
       <h3 className="text-lg font-bold mb-1">{name}</h3>
       <p className="text-sm text-gray-500 mb-2">{address}</p>
       <p className="text-base mb-3">{reason}</p>
-      {rating !== null && <span className="inline-block bg-yellow-100 text-yellow-800 text-sm px-2 py-0.5 rounded">{rating}</span>}
-      {formattedPriceLevel !== null && <span className="inline-block bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded ml-2">{formattedPriceLevel}</span>}
-      <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+      <div className="flex items-center gap-2 mt-2">
+        {rating !== null && <span className="inline-block bg-yellow-100 text-yellow-800 text-sm px-2 py-0.5 rounded">{rating}</span>}
+        {formattedPriceLevel !== null && <span className="inline-block bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded">{formattedPriceLevel}</span>}
+      </div>
+      <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="block mt-2 text-blue-600 hover:underline text-sm">
         Google Mapsで見る
       </a>
     </div>
