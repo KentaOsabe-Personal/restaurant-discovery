@@ -14,6 +14,7 @@ port 5175              port 3001               port 3306
 - **言語**: TypeScript 5（strict モード）
 - **フレームワーク**: React 19
 - **ビルドツール**: Vite 6
+- **スタイリング**: Tailwind CSS v4（`@tailwindcss/vite` プラグイン）
 - **テスト**: Vitest 3 + jsdom + Testing Library
 - **パッケージマネージャ**: pnpm
 
@@ -42,6 +43,19 @@ port 5175              port 3001               port 3306
 - セキュリティ: Brakeman + bundler-audit
 - オーバーライド: `backend/.rubocop.yml`
 
+### テスト
+- RSpec Rails（`rspec-rails ~> 7.0`）
+- HTTP スタブ: Webmock（外部APIのモック）
+
+### 外部API統合
+- **OpenAI API**（`ruby-openai ~> 8.3` gem）: 自然文解析・推薦生成に使用。モデル: `gpt-5-nano`
+- **Google Places API**（Faraday で直接HTTP）: テキスト検索で店舗を取得
+
+### APIキー管理
+- APIキーはファイルとして Docker ボリュームマウント: `/openai_apikey`, `/google_places_apikey`
+- コードはファイルから `File.read(API_KEY_PATH).strip` で読み込む
+- キーファイルはホストの `./openai_apikey`, `./google_places_apikey` に配置（git 管理外）
+
 ## データベース
 
 - MySQL 8.4
@@ -53,6 +67,9 @@ port 5175              port 3001               port 3306
 - **Docker First**: ローカル開発も本番も Docker Compose を基本とする
 - **型安全優先**: TypeScript strict モードで型エラーを設計段階で検出
 - **Solid スタック**: Rails 8 のデフォルト（DB-backed cache/queue/cable）を採用
+- **Service Object パターン**: 外部API処理は `app/services/` に分離、`.new.call(args)` 形式で呼び出す
+- **コントローラーで直接 JSON レンダリング**: jbuilder ビューは使わず `render json:` を使用
+- **Vite プロキシ**: フロントの `/api` → バックエンドコンテナ（`http://backend:3000`）に転送
 
 ## 開発コマンド
 
@@ -68,4 +85,5 @@ docker compose exec frontend pnpm build       # ビルド
 docker compose exec backend bin/rubocop       # Lint
 docker compose exec backend bin/brakeman --no-pager  # セキュリティ
 docker compose exec backend rails db:migrate  # マイグレーション
+docker compose exec backend bundle exec rspec # テスト
 ```
