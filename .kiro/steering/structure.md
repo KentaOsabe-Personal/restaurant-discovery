@@ -15,8 +15,15 @@ restaurant-discovery/
 
 ### ソースコード
 **場所**: `frontend/src/`
-**原則**: 機能が増えたらフィーチャーファースト（`src/features/`）またはレイヤー構成（`src/components/`, `src/hooks/`, `src/api/`）で整理する
-**現状**: スキャフォールド段階（`App.tsx`, `main.tsx` のみ）
+**レイヤー構成**（実装済み）:
+
+| ディレクトリ | 用途 | 例 |
+|---|---|---|
+| `src/api/` | バックエンドAPIとの通信（fetch ベース） | `search.ts` |
+| `src/components/` | UIコンポーネント（PascalCase） | `SearchInput.tsx`, `PlaceCard.tsx` |
+| `src/types/` | 共有TypeScript型定義 | `search.ts` |
+
+機能が増えたらフィーチャーファースト（`src/features/`）への移行も検討する。
 
 ### テスト
 **場所**: `frontend/src/test/`または各コンポーネントの隣（`*.test.tsx`）
@@ -24,15 +31,21 @@ restaurant-discovery/
 
 ## バックエンド構造（`backend/`）
 
-Rails 標準のレイヤードアーキテクチャに従う：
+Rails 標準のレイヤードアーキテクチャに Service Object 層を追加した構成：
 
 | ディレクトリ | 用途 |
 |---|---|
-| `app/controllers/` | リクエスト処理・レスポンス |
+| `app/controllers/api/` | API リクエスト処理（`render json:` で直接レスポンス） |
+| `app/services/` | 外部API統合・ビジネスロジック（Service Object パターン） |
 | `app/models/` | ドメインロジック・DB |
-| `app/views/` | Jbuilder テンプレート（JSON）|
-| `config/routes.rb` | ルーティング定義 |
+| `config/routes.rb` | ルーティング定義（`namespace :api` 使用） |
 | `db/migrate/` | スキーマ変更履歴 |
+
+### Service Object パターン
+- **配置**: `app/services/`
+- **呼び出し**: `ServiceName.new.call(args)` 形式
+- **エラークラス**: 各サービスに対応するエラークラスも同ディレクトリに配置（例: `GooglePlacesError`）
+- **コントローラーでの処理**: `rescue_from ServiceError` で統一的にエラーハンドリング
 
 ## 命名規則
 
@@ -44,7 +57,8 @@ Rails 標準のレイヤードアーキテクチャに従う：
 
 ### バックエンド
 - Rails 規約に準拠（snake_case ファイル名、PascalCase クラス名）
-- API コントローラは `Api::` 名前空間を使用予定（例: `Api::V1::RestaurantsController`）
+- API コントローラは `Api::` 名前空間を使用（例: `Api::SearchController`）
+- Service は `PascalCaseService` 命名、エラークラスは `PascalCaseError`
 
 ## インポート規則（フロントエンド）
 
