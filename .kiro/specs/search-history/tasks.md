@@ -51,14 +51,14 @@
   - _Requirements: 1.1, 3.1, 3.2_
 
 - [ ] 5. テストを実装する
-- [ ] 5.1 (P) useSearchHistory のユニットテストを実装する
+- [x] 5.1 (P) useSearchHistory のユニットテストを実装する
   - `addToHistory` の通常保存・重複排除・最大 10 件制限・空文字除外の各ケースを検証する
   - `removeFromHistory` の対象削除・存在しないクエリへのノーオペレーション動作を検証する
   - `clearHistory` の全件削除と空配列への遷移を検証する
   - localStorage の読み込み失敗時に空の履歴でフォールバックする動作を検証する
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 4.1, 5.1, 6.1, 6.3_
 
-- [ ] 5.2 (P) SearchHistoryChips のユニットテストを実装する
+- [x] 5.2 (P) SearchHistoryChips のユニットテストを実装する
   - `history` が空のとき何もレンダリングされないことを検証する
   - チップクリックで `onSelect` が正しいクエリで呼ばれることを検証する
   - ×ボタンクリックで `onRemove` が呼ばれ、`onSelect` は呼ばれないことを検証する

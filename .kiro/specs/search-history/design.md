@@ -270,7 +270,7 @@ interface SearchHistoryChipsProps {
 
 検索履歴は値オブジェクトの集合として扱う。
 
-- **SearchHistoryEntry**: `query`（検索文字列）+ `timestamp`（保存時刻）
+- **SearchHistoryEntry**: `query`（検索文字列）
 - **Invariants**:
   - `query` は空文字列でない
   - コレクション内に同一 `query` は存在しない（重複排除済み）

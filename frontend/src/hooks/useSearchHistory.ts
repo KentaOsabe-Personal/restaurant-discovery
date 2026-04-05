@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { SearchHistoryEntry } from '../types/search';
 
 const STORAGE_KEY = 'restaurant_search_history';
@@ -15,7 +15,9 @@ function loadFromStorage(): SearchHistoryEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as SearchHistoryEntry[];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as SearchHistoryEntry[];
   } catch {
     return [];
   }
@@ -23,7 +25,11 @@ function loadFromStorage(): SearchHistoryEntry[] {
 
 function saveToStorage(entries: SearchHistoryEntry[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    if (entries.length === 0) {
+      localStorage.removeItem(STORAGE_KEY);
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
   } catch {
     // クォータ超過など — React ステートの更新は継続する
   }
@@ -31,33 +37,30 @@ function saveToStorage(entries: SearchHistoryEntry[]): void {
 
 export function useSearchHistory(): UseSearchHistoryReturn {
   const [history, setHistory] = useState<SearchHistoryEntry[]>(loadFromStorage);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    saveToStorage(history);
+  }, [history]);
 
   const addToHistory = (query: string) => {
     if (query.trim() === '') return;
-
     setHistory((prev) => {
       const filtered = prev.filter((e) => e.query !== query);
-      const next = [{ query }, ...filtered].slice(0, MAX_HISTORY_SIZE);
-      saveToStorage(next);
-      return next;
+      return [{ query }, ...filtered].slice(0, MAX_HISTORY_SIZE);
     });
   };
 
   const removeFromHistory = (query: string) => {
-    setHistory((prev) => {
-      const next = prev.filter((e) => e.query !== query);
-      saveToStorage(next);
-      return next;
-    });
+    setHistory((prev) => prev.filter((e) => e.query !== query));
   };
 
   const clearHistory = () => {
     setHistory([]);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // 握りつぶし
-    }
   };
 
   return { history, addToHistory, removeFromHistory, clearHistory };
