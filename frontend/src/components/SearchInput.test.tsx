@@ -1,12 +1,34 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import SearchInput from './SearchInput';
+
+// 制御コンポーネントのテスト用ラッパー（Task 2.1 / 2.2 / 4.2 で内部状態変化が必要なケースに使用）
+function ControlledInput({ onSubmit, isLoading }: { onSubmit: (q: string) => void; isLoading?: boolean }) {
+  const [value, setValue] = useState('');
+  return <SearchInput value={value} onChange={setValue} onSubmit={onSubmit} isLoading={isLoading} />;
+}
 
 describe('SearchInput', () => {
   const mockOnSubmit = vi.fn();
+  const mockOnChange = vi.fn();
+
+  describe('制御コンポーネントのインターフェース (Task 2)', () => {
+    it('value prop がテキストフィールドの表示値として使われる', () => {
+      render(<SearchInput value="テスト入力" onChange={mockOnChange} onSubmit={mockOnSubmit} />);
+      expect(screen.getByRole('textbox')).toHaveValue('テスト入力');
+    });
+
+    it('テキスト変更時に onChange が新しい値で呼ばれる', () => {
+      const handleChange = vi.fn();
+      render(<SearchInput value="" onChange={handleChange} onSubmit={mockOnSubmit} />);
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: '新しい値' } });
+      expect(handleChange).toHaveBeenCalledWith('新しい値');
+    });
+  });
 
   describe('Task 1.2: テキスト入力フィールドとボタンの描画', () => {
     beforeEach(() => {
-      render(<SearchInput onSubmit={mockOnSubmit} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} />);
     });
 
     it('input[type=text]を表示する', () => {
@@ -18,7 +40,7 @@ describe('SearchInput', () => {
     });
 
     it('テキストフィールドにプレースホルダーテキストを表示する', () => {
-      expect(screen.getByPlaceholderText('渋谷でイタリアンなど')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('古町の海鮮居酒屋など')).toBeInTheDocument();
     });
 
     it('ボタンに「探す」ラベルを表示する', () => {
@@ -33,7 +55,7 @@ describe('SearchInput', () => {
   describe('Task 2.1: テキスト入力の制御とボタン有効・無効制御', () => {
     beforeEach(() => {
       mockOnSubmit.mockClear();
-      render(<SearchInput onSubmit={mockOnSubmit} />);
+      render(<ControlledInput onSubmit={mockOnSubmit} />);
     });
 
     it('初期状態でボタンが disabled である', () => {
@@ -61,7 +83,7 @@ describe('SearchInput', () => {
   describe('Task 2.2: フォーム送信コールバック', () => {
     beforeEach(() => {
       mockOnSubmit.mockClear();
-      render(<SearchInput onSubmit={mockOnSubmit} />);
+      render(<ControlledInput onSubmit={mockOnSubmit} />);
     });
 
     it('有効な入力でフォーム送信すると onSubmit が入力値を引数として呼ばれる', () => {
@@ -90,34 +112,36 @@ describe('SearchInput', () => {
     });
 
     it('isLoading=true のとき input が disabled になる', () => {
-      render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
       expect(screen.getByRole('textbox')).toBeDisabled();
     });
 
     it('isLoading=true のとき button が disabled になる', () => {
-      render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
       expect(screen.getByRole('button')).toBeDisabled();
     });
 
     it('isLoading=true のとき form に aria-busy="true" が付与される', () => {
-      render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
       expect(screen.getByRole('search')).toHaveAttribute('aria-busy', 'true');
     });
 
     it('isLoading=true のとき button ラベルが「検索中...」になる', () => {
-      render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
       expect(screen.getByRole('button', { name: '検索中...' })).toBeInTheDocument();
     });
 
     it('isLoading=true 時にフォーム送信しても onSubmit が呼ばれない', () => {
-      render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
       fireEvent.submit(screen.getByRole('search'));
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
     it('isLoading が false に変わると input が enabled になる', () => {
-      const { rerender } = render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
-      rerender(<SearchInput onSubmit={mockOnSubmit} isLoading={false} />);
+      const { rerender } = render(
+        <SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />,
+      );
+      rerender(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={false} />);
       expect(screen.getByRole('textbox')).toBeEnabled();
     });
   });
@@ -125,7 +149,7 @@ describe('SearchInput', () => {
   describe('Task 4.2: ボタンクリックによる送信のテスト', () => {
     beforeEach(() => {
       mockOnSubmit.mockClear();
-      render(<SearchInput onSubmit={mockOnSubmit} />);
+      render(<ControlledInput onSubmit={mockOnSubmit} />);
     });
 
     it('有効な入力でボタンクリック時に onSubmit が入力値を引数として呼ばれる', () => {
@@ -142,16 +166,17 @@ describe('SearchInput', () => {
     });
 
     it('isLoading=true のときボタンクリックしても onSubmit が呼ばれない', () => {
-      render(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
+      render(<SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
       fireEvent.click(screen.getByRole('button'));
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
     it('isLoading が false に変わり入力がある場合はボタンが enabled へ戻る', () => {
-      const { rerender } = render(<SearchInput onSubmit={mockOnSubmit} />);
-      fireEvent.change(screen.getByRole('textbox'), { target: { value: '池袋のカフェ' } });
-      rerender(<SearchInput onSubmit={mockOnSubmit} isLoading={true} />);
-      rerender(<SearchInput onSubmit={mockOnSubmit} isLoading={false} />);
+      const { rerender } = render(
+        <SearchInput value="" onChange={mockOnChange} onSubmit={mockOnSubmit} />,
+      );
+      rerender(<SearchInput value="池袋のカフェ" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={true} />);
+      rerender(<SearchInput value="池袋のカフェ" onChange={mockOnChange} onSubmit={mockOnSubmit} isLoading={false} />);
       expect(screen.getByRole('button', { name: '探す' })).toBeEnabled();
     });
   });

@@ -1,28 +1,27 @@
-import { useState } from 'react';
-
 export interface SearchInputProps {
+  value: string;
+  onChange: (query: string) => void;
   onSubmit: (query: string) => void;
   isLoading?: boolean;
 }
 
-function SearchInput({ onSubmit, isLoading = false }: SearchInputProps) {
-  const [query, setQuery] = useState<string>('');
-  const isSubmitDisabled = query.trim() === '' || isLoading;
+function SearchInput({ value, onChange, onSubmit, isLoading = false }: SearchInputProps) {
+  const isSubmitDisabled = value.trim() === '' || isLoading;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitDisabled) return;
-    onSubmit(query);
+    onSubmit(value);
   }
 
   return (
     <form role="search" onSubmit={handleSubmit} aria-busy={isLoading} className="flex w-full gap-2">
       <input
         type="text"
-        placeholder="渋谷でイタリアンなど"
+        placeholder="古町の海鮮居酒屋など"
         aria-label="レストラン検索"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         disabled={isLoading}
         className="flex-1 border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
       />
