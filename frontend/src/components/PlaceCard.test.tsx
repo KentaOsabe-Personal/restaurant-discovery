@@ -46,21 +46,20 @@ describe('PlaceCard', () => {
     });
 
     it('google_maps_url が <a> の href に設定される', () => {
-      expect(screen.getByRole('link')).toHaveAttribute('href', 'https://maps.google.com/?cid=123');
+      expect(screen.getByRole('link', { name: 'Google Mapsで見る' })).toHaveAttribute('href', 'https://maps.google.com/?cid=123');
     });
 
     it('https:// 以外の URL は # にフォールバックされる（XSS 対策）', () => {
       render(<PlaceCard {...baseProps} google_maps_url="javascript:alert(1)" />);
-      const links = screen.getAllByRole('link');
-      expect(links[links.length - 1]).toHaveAttribute('href', '#');
+      expect(screen.getAllByRole('link', { name: 'Google Mapsで見る' })[1]).toHaveAttribute('href', '#');
     });
 
     it('target="_blank" が付与される', () => {
-      expect(screen.getByRole('link')).toHaveAttribute('target', '_blank');
+      expect(screen.getByRole('link', { name: 'Google Mapsで見る' })).toHaveAttribute('target', '_blank');
     });
 
     it('rel="noopener noreferrer" が付与される', () => {
-      expect(screen.getByRole('link')).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(screen.getByRole('link', { name: 'Google Mapsで見る' })).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
     it('リンクに意味のあるラベルテキストが表示される', () => {
@@ -69,6 +68,49 @@ describe('PlaceCard', () => {
 
     it('店舗名が heading level 3 (<h3>) としてレンダリングされる', () => {
       expect(screen.getByRole('heading', { level: 3, name: 'テスト食堂' })).toBeInTheDocument();
+    });
+  });
+
+  describe('食べログリンク Task 3.1: 表示・非表示の基本ケース', () => {
+    it('通常の店名が与えられた場合に「食べログで見る」リンクが表示される', () => {
+      render(<PlaceCard {...baseProps} />);
+      expect(screen.getByRole('link', { name: '食べログで見る' })).toBeInTheDocument();
+    });
+
+    it('空文字の店名の場合に食べログリンクが表示されない', () => {
+      render(<PlaceCard {...baseProps} name="" />);
+      expect(screen.queryByRole('link', { name: '食べログで見る' })).not.toBeInTheDocument();
+    });
+
+    it('空白のみの店名の場合に食べログリンクが表示されない', () => {
+      render(<PlaceCard {...baseProps} name="   " />);
+      expect(screen.queryByRole('link', { name: '食べログで見る' })).not.toBeInTheDocument();
+    });
+
+    it('Google Maps リンクと食べログリンクが同時に表示される', () => {
+      render(<PlaceCard {...baseProps} />);
+      expect(screen.getByRole('link', { name: 'Google Mapsで見る' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '食べログで見る' })).toBeInTheDocument();
+    });
+  });
+
+  describe('食べログリンク Task 3.2: 属性と URL エンコード', () => {
+    it('食べログリンクに target="_blank" が付与される', () => {
+      render(<PlaceCard {...baseProps} />);
+      expect(screen.getByRole('link', { name: '食べログで見る' })).toHaveAttribute('target', '_blank');
+    });
+
+    it('食べログリンクに rel="noopener noreferrer" が付与される', () => {
+      render(<PlaceCard {...baseProps} />);
+      expect(screen.getByRole('link', { name: '食べログで見る' })).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('日本語店名が encodeURIComponent でエンコードされた URL が href に設定される', () => {
+      render(<PlaceCard {...baseProps} name="居酒屋" />);
+      expect(screen.getByRole('link', { name: '食べログで見る' })).toHaveAttribute(
+        'href',
+        `https://tabelog.com/niigata/rstLst/?vs=1&sk=${encodeURIComponent('居酒屋')}`
+      );
     });
   });
 
