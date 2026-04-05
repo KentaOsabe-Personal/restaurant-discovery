@@ -5,7 +5,9 @@ import SearchInput from './components/SearchInput';
 import RecommendationList from './components/RecommendationList';
 import QuickSearchButtons from './components/QuickSearchButtons';
 import SearchHistoryChips from './components/SearchHistoryChips';
+import OmakaseButton from './components/OmakaseButton';
 import { quickSearchPresets } from './config/quickSearchPresets';
+import { omakasePresets } from './config/omakasePresets';
 import { useSearchHistory } from './hooks/useSearchHistory';
 
 function App() {
@@ -47,6 +49,7 @@ function App() {
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
         <QuickSearchButtons presets={quickSearchPresets} onSelect={handleQuickSearch} isLoading={isLoading} />
+        <OmakaseButton presets={omakasePresets} onSelect={handleQuickSearch} isLoading={isLoading} />
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
         {error !== null && !isLoading && <p className="text-red-600">{error}</p>}
         {recommendations !== null && recommendations.length === 0 && !isLoading && error === null && (
