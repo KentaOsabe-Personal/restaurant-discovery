@@ -2,6 +2,10 @@ export type SearchRequest = {
   query: string;
 };
 
+export type SearchHistoryEntry = {
+  query: string;
+};
+
 export type Recommendation = {
   name: string;
   rating: number | null;
