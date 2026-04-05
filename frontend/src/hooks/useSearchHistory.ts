@@ -17,7 +17,10 @@ function loadFromStorage(): SearchHistoryEntry[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed as SearchHistoryEntry[];
+    return parsed.filter(
+      (item): item is SearchHistoryEntry =>
+        typeof item === 'object' && item !== null && typeof item.query === 'string',
+    );
   } catch {
     return [];
   }
@@ -48,10 +51,11 @@ export function useSearchHistory(): UseSearchHistoryReturn {
   }, [history]);
 
   const addToHistory = (query: string) => {
-    if (query.trim() === '') return;
+    const trimmed = query.trim();
+    if (trimmed === '') return;
     setHistory((prev) => {
-      const filtered = prev.filter((e) => e.query !== query);
-      return [{ query }, ...filtered].slice(0, MAX_HISTORY_SIZE);
+      const filtered = prev.filter((e) => e.query !== trimmed);
+      return [{ query: trimmed }, ...filtered].slice(0, MAX_HISTORY_SIZE);
     });
   };
 
