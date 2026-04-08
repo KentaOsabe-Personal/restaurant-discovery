@@ -31,7 +31,7 @@ function OtherCandidateSection({ candidates, isExpanded, onExpand, isSearchLoadi
       <h2 className="text-lg font-semibold text-gray-700 mb-3">その他の候補</h2>
       <div className="flex flex-col gap-4">
         {candidates.map((candidate) => (
-          <PlaceCard key={candidate.name} {...candidate} />
+          <PlaceCard key={candidate.google_maps_url} {...candidate} />
         ))}
       </div>
     </div>

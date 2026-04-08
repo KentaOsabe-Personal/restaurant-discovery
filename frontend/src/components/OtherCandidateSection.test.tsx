@@ -64,11 +64,10 @@ describe('OtherCandidateSection', () => {
     });
 
     it('isExpanded=true で各候補に reason が表示されない', () => {
-      const candidate: OtherCandidate = { ...mockCandidate };
-      render(<OtherCandidateSection {...defaultProps} candidates={[candidate]} isExpanded={true} />);
-      // reason は渡されないため推薦理由の段落は存在しない
-      // PlaceCard に reason を渡していないことを確認するには、候補名が表示されることで十分
+      render(<OtherCandidateSection {...defaultProps} isExpanded={true} />);
       expect(screen.getByText('候補食堂')).toBeInTheDocument();
+      // PlaceCard は reason が undefined のとき推薦理由段落を描画しない（要件2.4）
+      expect(document.querySelector('p.text-base.mb-3')).toBeNull();
     });
 
     it('isExpanded=false でも false のときリストは表示されない', () => {
