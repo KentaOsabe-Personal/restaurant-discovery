@@ -44,8 +44,16 @@ RSpec.describe "POST /api/search", type: :request do
       json = response.parsed_body
       expect(json["recommendations"]).to be_an(Array)
       expect(json["recommendations"].first).to include("name", "rating", "address", "google_maps_url", "reason")
-      expect(json["parsed_conditions"]).to include("area" => "渋谷", "genre" => "イタリアン", "price_level" => nil)
-      expect(json["parsed_conditions"]).not_to have_key("keyword")
+      expect(json["parsed_conditions"]).to include("area" => "渋谷", "genre" => "イタリアン", "price_level" => nil, "keyword" => nil)
+      expect(json["parsed_conditions"]).to have_key("keyword")
+    end
+
+    it "keyword が非 null の場合も parsed_conditions に含む" do
+      allow_any_instance_of(QueryParserService).to receive(:call)
+        .and_return({ area: "新宿", genre: nil, price_level: nil, keyword: "テラス席" })
+      post "/api/search", params: { query: "新宿でテラス席" }.to_json, headers: valid_headers
+      json = response.parsed_body
+      expect(json["parsed_conditions"]).to include("keyword" => "テラス席")
     end
 
     it "Content-Type が application/json である" do
@@ -66,10 +74,11 @@ RSpec.describe "POST /api/search", type: :request do
       expect(response.parsed_body["recommendations"]).to eq([])
     end
 
-    it "parsed_conditions を含む JSON を返す" do
+    it "parsed_conditions を含む JSON を返す（空結果パスでも keyword を含む）" do
       post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
       json = response.parsed_body
-      expect(json["parsed_conditions"]).to include("area" => "渋谷", "genre" => "イタリアン", "price_level" => nil)
+      expect(json["parsed_conditions"]).to include("area" => "渋谷", "genre" => "イタリアン", "price_level" => nil, "keyword" => nil)
+      expect(json["parsed_conditions"]).to have_key("keyword")
     end
 
     it "RecommendationService を呼ばない" do

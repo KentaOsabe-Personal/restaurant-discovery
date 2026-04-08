@@ -38,6 +38,7 @@ Kiro-style Spec Driven Development implementation on AI-DLC (AI Development Life
 - Human review required each phase; use `-y` only for intentional fast-track
 - Keep steering current and verify alignment with `/kiro:spec-status`
 - Follow the user's instructions precisely, and within that scope act autonomously: gather the necessary context and complete the requested work end-to-end in this run, asking questions only when essential information is missing or the instructions are critically ambiguous.
+- **差分比較は必ず `origin/main` と行う**（ローカルの `main` はpull済みとは限らないため）。例: `git diff origin/main...HEAD`, `git log origin/main..HEAD`
 
 ## Steering Configuration
 - Load entire `.kiro/steering/` as project memory

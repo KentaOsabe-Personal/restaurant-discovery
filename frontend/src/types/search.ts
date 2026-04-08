@@ -19,6 +19,7 @@ export type ParsedConditions = {
   area: string | null;
   genre: string | null;
   price_level: string | null;
+  keyword: string | null;
 };
 
 export type SearchResponse = {

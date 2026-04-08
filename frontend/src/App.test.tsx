@@ -7,7 +7,7 @@ vi.mock('./api/search');
 
 const emptyResponse: SearchResponse = {
   recommendations: [],
-  parsed_conditions: { area: null, genre: null, price_level: null },
+  parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
 };
 
 describe('App', () => {
@@ -27,7 +27,7 @@ describe('App', () => {
           reason: '雰囲気が良くておすすめです',
         },
       ],
-      parsed_conditions: { area: null, genre: null, price_level: null },
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
     });
 
     render(<App />);
@@ -78,6 +78,71 @@ describe('App', () => {
     });
 
     expect(input).not.toBeDisabled();
+  });
+});
+
+describe('App - SearchConditionTags統合', () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('検索成功後にSearchConditionTagsが表示される', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [],
+      parsed_conditions: { area: '渋谷', genre: 'イタリアン', price_level: null, keyword: null },
+    });
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByText('エリア: 渋谷');
+    expect(screen.getByText('ジャンル: イタリアン')).toBeInTheDocument();
+  });
+
+  it('ローディング中はSearchConditionTagsが表示されない', async () => {
+    let resolve!: () => void;
+    vi.mocked(searchPlaces).mockReturnValueOnce(
+      new Promise<SearchResponse>((res) => {
+        resolve = () =>
+          res({
+            recommendations: [],
+            parsed_conditions: { area: '渋谷', genre: null, price_level: null, keyword: null },
+          });
+      }),
+    );
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    expect(screen.queryByText('エリア: 渋谷')).toBeNull();
+
+    await act(async () => {
+      resolve();
+    });
+
+    expect(screen.getByText('エリア: 渋谷')).toBeInTheDocument();
+  });
+
+  it('新しい検索開始時に前回のタグがクリアされる', async () => {
+    vi.mocked(searchPlaces)
+      .mockResolvedValueOnce({
+        recommendations: [],
+        parsed_conditions: { area: '渋谷', genre: null, price_level: null, keyword: null },
+      })
+      .mockReturnValueOnce(new Promise<SearchResponse>(() => {}));
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByText('エリア: 渋谷');
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新潟でラーメン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    expect(screen.queryByText('エリア: 渋谷')).toBeNull();
   });
 });
 
