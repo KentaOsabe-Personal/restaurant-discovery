@@ -30,6 +30,7 @@ module Api
       if places.empty?
         render json: {
           recommendations: [],
+          other_candidates: [],
           parsed_conditions: {
             area: parsed_conditions[:area],
             genre: parsed_conditions[:genre],
@@ -42,8 +43,12 @@ module Api
 
       recommendations = RecommendationService.new.call(places, query)
 
+      recommended_names = recommendations.map { |r| r[:name] }.to_set
+      other_candidates = places.reject { |p| recommended_names.include?(p[:name]) }
+
       render json: {
         recommendations: recommendations,
+        other_candidates: other_candidates,
         parsed_conditions: {
           area: parsed_conditions[:area],
           genre: parsed_conditions[:genre],
