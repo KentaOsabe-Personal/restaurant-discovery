@@ -1,6 +1,6 @@
-import type { Recommendation } from '../types/search';
+import type { Candidate } from '../types/search';
 
-export type PlaceCardProps = Recommendation;
+export type PlaceCardProps = Candidate & { reason?: string };
 
 const PRICE_LEVEL_MAP: Record<string, string> = {
   PRICE_LEVEL_INEXPENSIVE: '¥',
@@ -28,7 +28,7 @@ function PlaceCard({ name, rating, price_level, address, google_maps_url, reason
     <div className="bg-white rounded-lg shadow p-4">
       <h3 className="text-lg font-bold mb-1">{name}</h3>
       <p className="text-sm text-gray-500 mb-2">{address}</p>
-      <p className="text-base mb-3">{reason}</p>
+      {reason !== undefined && <p className="text-base mb-3">{reason}</p>}
       <div className="flex items-center gap-2 mt-2">
         {rating !== null && <span className="inline-block bg-yellow-100 text-yellow-800 text-sm px-2 py-0.5 rounded">{rating}</span>}
         {formattedPriceLevel !== null && <span className="inline-block bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded">{formattedPriceLevel}</span>}

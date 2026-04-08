@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import type { Recommendation, ParsedConditions } from './types/search';
+import type { Recommendation, OtherCandidate, ParsedConditions } from './types/search';
 import { searchPlaces } from './api/search';
 import SearchInput from './components/SearchInput';
 import RecommendationList from './components/RecommendationList';
+import OtherCandidateSection from './components/OtherCandidateSection';
 import QuickSearchButtons from './components/QuickSearchButtons';
 import SearchHistoryChips from './components/SearchHistoryChips';
 import OmakaseButton from './components/OmakaseButton';
@@ -15,6 +16,8 @@ function App() {
   const [query, setQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
+  const [otherCandidates, setOtherCandidates] = useState<OtherCandidate[] | null>(null);
+  const [showOtherCandidates, setShowOtherCandidates] = useState<boolean>(false);
   const [parsedConditions, setParsedConditions] = useState<ParsedConditions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
@@ -34,10 +37,13 @@ function App() {
     setIsLoading(true);
     setError(null);
     setRecommendations(null);
+    setOtherCandidates(null);
+    setShowOtherCandidates(false);
     setParsedConditions(null);
     try {
       const response = await searchPlaces(query);
       setRecommendations(response.recommendations);
+      setOtherCandidates(response.other_candidates);
       setParsedConditions(response.parsed_conditions);
     } catch (e) {
       setError(e instanceof Error ? e.message : '検索に失敗しました');
@@ -57,11 +63,22 @@ function App() {
         {!isLoading && parsedConditions !== null && <SearchConditionTags parsedConditions={parsedConditions} />}
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
         {error !== null && !isLoading && <p className="text-red-600">{error}</p>}
-        {recommendations !== null && recommendations.length === 0 && !isLoading && error === null && (
+        {recommendations !== null && recommendations.length === 0 && (otherCandidates === null || otherCandidates.length === 0) && !isLoading && error === null && (
           <p className="text-center text-gray-400">条件に合うレストランが見つかりませんでした</p>
+        )}
+        {recommendations !== null && recommendations.length === 0 && otherCandidates !== null && otherCandidates.length > 0 && !isLoading && error === null && (
+          <p className="text-center text-gray-400">AIのおすすめは見つかりませんでしたが、その他の候補があります</p>
         )}
         {recommendations !== null && recommendations.length > 0 && !isLoading && (
           <RecommendationList recommendations={recommendations} />
+        )}
+        {otherCandidates !== null && (
+          <OtherCandidateSection
+            candidates={otherCandidates}
+            isExpanded={showOtherCandidates}
+            onExpand={() => setShowOtherCandidates(true)}
+            isSearchLoading={isLoading}
+          />
         )}
       </div>
     </div>

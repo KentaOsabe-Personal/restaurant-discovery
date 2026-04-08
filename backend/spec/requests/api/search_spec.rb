@@ -74,6 +74,11 @@ RSpec.describe "POST /api/search", type: :request do
       expect(response.parsed_body["recommendations"]).to eq([])
     end
 
+    it "other_candidates が空配列を返す" do
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response.parsed_body["other_candidates"]).to eq([])
+    end
+
     it "parsed_conditions を含む JSON を返す（空結果パスでも keyword を含む）" do
       post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
       json = response.parsed_body
@@ -84,6 +89,71 @@ RSpec.describe "POST /api/search", type: :request do
     it "RecommendationService を呼ばない" do
       expect_any_instance_of(RecommendationService).not_to receive(:call)
       post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+    end
+  end
+
+  describe "other_candidates の差分計算" do
+    let(:multi_places) do
+      [
+        { name: "レストランA", rating: 4.5, price_level: nil, address: "東京都渋谷区", google_maps_url: "https://maps.google.com/?cid=1" },
+        { name: "レストランB", rating: 4.0, price_level: "¥¥", address: "東京都渋谷区2", google_maps_url: "https://maps.google.com/?cid=2" },
+        { name: "レストランC", rating: 3.8, price_level: "¥", address: "東京都渋谷区3", google_maps_url: "https://maps.google.com/?cid=3" }
+      ]
+    end
+    let(:partial_recommendations) do
+      [
+        { name: "レストランA", rating: 4.5, price_level: nil, address: "東京都渋谷区", google_maps_url: "https://maps.google.com/?cid=1", reason: "おすすめです" }
+      ]
+    end
+
+    before do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(parsed_conditions)
+    end
+
+    it "recommendations に含まれない places のみが other_candidates に返される" do
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(multi_places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(partial_recommendations)
+
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      json = response.parsed_body
+
+      other_names = json["other_candidates"].map { |c| c["name"] }
+      expect(other_names).to contain_exactly("レストランB", "レストランC")
+      expect(other_names).not_to include("レストランA")
+    end
+
+    it "全 places が recommendations に含まれる場合 other_candidates は空配列を返す" do
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(recommendations)
+
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      json = response.parsed_body
+
+      expect(json["other_candidates"]).to eq([])
+    end
+
+    it "other_candidates の順序が Google Places API の返却順を維持する" do
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(multi_places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(partial_recommendations)
+
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      json = response.parsed_body
+
+      other_names = json["other_candidates"].map { |c| c["name"] }
+      expect(other_names).to eq([ "レストランB", "レストランC" ])
+    end
+
+    it "other_candidates に reason フィールドが含まれない" do
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(multi_places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(partial_recommendations)
+
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      json = response.parsed_body
+
+      json["other_candidates"].each do |candidate|
+        expect(candidate).not_to have_key("reason")
+        expect(candidate).to include("name", "rating", "address", "google_maps_url")
+      end
     end
   end
 

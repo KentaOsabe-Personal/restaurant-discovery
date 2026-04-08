@@ -114,6 +114,27 @@ describe('PlaceCard', () => {
     });
   });
 
+  describe('Task 2.2 (load-more): reason optional', () => {
+    it('reason を省略した場合は推薦理由の段落が表示されない', () => {
+      const { reason: _reason, ...propsWithoutReason } = baseProps;
+      render(<PlaceCard {...propsWithoutReason} />);
+      expect(screen.queryByText('コスパが良くておすすめです')).not.toBeInTheDocument();
+    });
+
+    it('reason を省略しても他の要素（name, address, links）は表示される', () => {
+      const { reason: _reason, ...propsWithoutReason } = baseProps;
+      render(<PlaceCard {...propsWithoutReason} />);
+      expect(screen.getByText('テスト食堂')).toBeInTheDocument();
+      expect(screen.getByText('東京都渋谷区1-1-1')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Google Mapsで見る' })).toBeInTheDocument();
+    });
+
+    it('reason が指定された場合は推薦理由が表示される', () => {
+      render(<PlaceCard {...baseProps} />);
+      expect(screen.getByText('コスパが良くておすすめです')).toBeInTheDocument();
+    });
+  });
+
   describe('Task 3.3: formatPriceLevel ユニットテスト', () => {
     it('PRICE_LEVEL_INEXPENSIVE → ¥', () => {
       render(<PlaceCard {...baseProps} price_level="PRICE_LEVEL_INEXPENSIVE" />);

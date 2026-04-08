@@ -7,6 +7,7 @@ vi.mock('./api/search');
 
 const emptyResponse: SearchResponse = {
   recommendations: [],
+  other_candidates: [],
   parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
 };
 
@@ -27,6 +28,7 @@ describe('App', () => {
           reason: '雰囲気が良くておすすめです',
         },
       ],
+      other_candidates: [],
       parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
     });
 
@@ -89,6 +91,7 @@ describe('App - SearchConditionTags統合', () => {
   it('検索成功後にSearchConditionTagsが表示される', async () => {
     vi.mocked(searchPlaces).mockResolvedValueOnce({
       recommendations: [],
+      other_candidates: [],
       parsed_conditions: { area: '渋谷', genre: 'イタリアン', price_level: null, keyword: null },
     });
 
@@ -107,6 +110,7 @@ describe('App - SearchConditionTags統合', () => {
         resolve = () =>
           res({
             recommendations: [],
+            other_candidates: [],
             parsed_conditions: { area: '渋谷', genre: null, price_level: null, keyword: null },
           });
       }),
@@ -129,6 +133,7 @@ describe('App - SearchConditionTags統合', () => {
     vi.mocked(searchPlaces)
       .mockResolvedValueOnce({
         recommendations: [],
+        other_candidates: [],
         parsed_conditions: { area: '渋谷', genre: null, price_level: null, keyword: null },
       })
       .mockReturnValueOnce(new Promise<SearchResponse>(() => {}));
@@ -206,5 +211,73 @@ describe('App - クイック検索統合', () => {
     quickButtons.forEach((label) => {
       expect(screen.getByRole('button', { name: label })).toBeEnabled();
     });
+  });
+});
+
+describe('App - OtherCandidateSection統合', () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('検索成功後にother_candidatesがある場合「もっと見る」ボタンが表示される', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [],
+      other_candidates: [
+        {
+          name: '候補レストランA',
+          rating: 4.0,
+          price_level: 'PRICE_LEVEL_INEXPENSIVE',
+          address: '東京都新宿区1-1-1',
+          google_maps_url: 'https://maps.google.com/candidateA',
+        },
+      ],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新宿でランチ' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByRole('button', { name: 'もっと見る' });
+  });
+
+  it('新規検索開始時に「もっと見る」ボタンおよび候補リストがリセットされる', async () => {
+    vi.mocked(searchPlaces)
+      .mockResolvedValueOnce({
+        recommendations: [],
+        other_candidates: [
+          {
+            name: '候補レストランA',
+            rating: 4.0,
+            price_level: null,
+            address: '東京都新宿区1-1-1',
+            google_maps_url: 'https://maps.google.com/candidateA',
+          },
+        ],
+        parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+      })
+      .mockReturnValueOnce(new Promise<SearchResponse>(() => {}));
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新宿でランチ' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByRole('button', { name: 'もっと見る' });
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新潟でラーメン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    expect(screen.queryByRole('button', { name: 'もっと見る' })).toBeNull();
+  });
+
+  it('検索エラー時にOtherCandidateSectionが表示されない', async () => {
+    vi.mocked(searchPlaces).mockRejectedValueOnce(new Error('HTTP error: 500'));
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新宿でランチ' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByText('HTTP error: 500');
+    expect(screen.queryByRole('button', { name: 'もっと見る' })).toBeNull();
   });
 });
