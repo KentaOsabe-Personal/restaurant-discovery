@@ -33,7 +33,8 @@ module Api
           parsed_conditions: {
             area: parsed_conditions[:area],
             genre: parsed_conditions[:genre],
-            price_level: parsed_conditions[:price_level]
+            price_level: parsed_conditions[:price_level],
+            keyword: parsed_conditions[:keyword]
           }
         }, status: :ok
         return
@@ -46,7 +47,8 @@ module Api
         parsed_conditions: {
           area: parsed_conditions[:area],
           genre: parsed_conditions[:genre],
-          price_level: parsed_conditions[:price_level]
+          price_level: parsed_conditions[:price_level],
+          keyword: parsed_conditions[:keyword]
         }
       }, status: :ok
     end
