@@ -2,9 +2,9 @@ class RecommendationService
   MODEL = "gpt-5-nano"
   API_KEY_PATH = "/openai_apikey"
 
-  SYSTEM_PROMPT = <<~PROMPT
+  SYSTEM_PROMPT_TEMPLATE = <<~PROMPT
     あなたはレストラン推薦アシスタントです。
-    ユーザーのクエリと候補店リスト（candidates）を受け取り、最も適した 3〜5 件を選んでください。
+    ユーザーのクエリと候補店リスト（candidates）を受け取り、最も適した %<min>d〜%<max>d 件を選んでください。
 
     選定基準: クエリとの関連性、評価（rating）、価格帯（price_level）
     出力: candidates に含まれる name をそのまま使用してください（変更しないこと）
@@ -38,15 +38,16 @@ class RecommendationService
     }
   }.freeze
 
-  def call(places, query)
+  def call(places, query, min_count: 3, max_count: 5)
     return [] if places.empty?
 
+    prompt = format(SYSTEM_PROMPT_TEMPLATE, min: min_count, max: max_count)
     client = build_client
     response = client.chat(
       parameters: {
         model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: prompt },
           { role: "user", content: build_user_message(places, query) }
         ],
         response_format: RESPONSE_SCHEMA

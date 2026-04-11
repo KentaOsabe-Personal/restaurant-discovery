@@ -6,10 +6,12 @@ import RecommendationList from './components/RecommendationList';
 import OtherCandidateSection from './components/OtherCandidateSection';
 import QuickSearchButtons from './components/QuickSearchButtons';
 import SearchHistoryChips from './components/SearchHistoryChips';
-import OmakaseButton from './components/OmakaseButton';
+import OmakaseButtons from './components/OmakaseButtons';
 import SearchConditionTags from './components/SearchConditionTags';
 import { quickSearchPresets } from './config/quickSearchPresets';
-import { omakasePresets } from './config/omakasePresets';
+import { omakaseAreas } from './config/omakaseAreas';
+import type { OmakaseAreaId } from './config/omakaseAreas';
+import { fetchOmakase } from './api/omakase';
 import { useSearchHistory } from './hooks/useSearchHistory';
 
 function App() {
@@ -52,6 +54,26 @@ function App() {
     }
   }
 
+  async function handleOmakase(areaId: OmakaseAreaId): Promise<void> {
+    setIsLoading(true);
+    setError(null);
+    setRecommendations(null);
+    setOtherCandidates(null);
+    setShowOtherCandidates(false);
+    setParsedConditions(null);
+    setQuery('');
+    try {
+      const response = await fetchOmakase(areaId);
+      setRecommendations(response.recommendations);
+      setOtherCandidates(response.other_candidates);
+      setParsedConditions(response.parsed_conditions);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'おまかせ取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -59,7 +81,7 @@ function App() {
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
         <QuickSearchButtons presets={quickSearchPresets} onSelect={handleQuickSearch} isLoading={isLoading} />
-        <OmakaseButton presets={omakasePresets} onSelect={handleQuickSearch} isLoading={isLoading} />
+        <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />
         {!isLoading && parsedConditions !== null && <SearchConditionTags parsedConditions={parsedConditions} />}
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
         {error !== null && !isLoading && <p className="text-red-600">{error}</p>}

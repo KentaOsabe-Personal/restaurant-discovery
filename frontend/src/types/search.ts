@@ -35,3 +35,12 @@ export type SearchResponse = {
   other_candidates: OtherCandidate[];
   parsed_conditions: ParsedConditions;
 };
+
+export type OmakaseMeta = {
+  area_id: string;
+  sub_area: string;
+};
+
+export type OmakaseResponse = SearchResponse & {
+  omakase: OmakaseMeta;
+};
