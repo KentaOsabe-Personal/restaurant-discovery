@@ -29,7 +29,7 @@ RSpec.describe OmakaseService do
 
   describe "#call" do
     context "ekimae を渡した場合" do
-      it "area / genre / sub_area / area_id を含む Hash を返す" do
+      it "area / genre / sub_area / area_id / area_names を含む Hash を返す" do
         result = service.call("ekimae")
 
         expect(result[:genre]).to eq("居酒屋 バー")
@@ -38,11 +38,12 @@ RSpec.describe OmakaseService do
         expect(result[:keyword]).to be_nil
         expect(described_class::SUB_AREAS["ekimae"][:names]).to include(result[:sub_area])
         expect(result[:area]).to eq("新潟市中央区 #{result[:sub_area]}")
+        expect(result[:area_names]).to contain_exactly(*described_class::SUB_AREAS["ekimae"][:names])
       end
     end
 
     context "ekinan を渡した場合" do
-      it "area / genre / sub_area / area_id を含む Hash を返す" do
+      it "area / genre / sub_area / area_id / area_names を含む Hash を返す" do
         result = service.call("ekinan")
 
         expect(result[:genre]).to eq("居酒屋 バー")
@@ -51,11 +52,12 @@ RSpec.describe OmakaseService do
         expect(result[:keyword]).to be_nil
         expect(described_class::SUB_AREAS["ekinan"][:names]).to include(result[:sub_area])
         expect(result[:area]).to eq("新潟市中央区 #{result[:sub_area]}")
+        expect(result[:area_names]).to contain_exactly(*described_class::SUB_AREAS["ekinan"][:names])
       end
     end
 
     context "furumachi を渡した場合" do
-      it "area / genre / sub_area / area_id を含む Hash を返す" do
+      it "area / genre / sub_area / area_id / area_names を含む Hash を返す" do
         result = service.call("furumachi")
 
         expect(result[:genre]).to eq("居酒屋 バー")
@@ -64,11 +66,12 @@ RSpec.describe OmakaseService do
         expect(result[:keyword]).to be_nil
         expect(described_class::SUB_AREAS["furumachi"][:names]).to include(result[:sub_area])
         expect(result[:area]).to eq("新潟市中央区 #{result[:sub_area]}")
+        expect(result[:area_names]).to contain_exactly(*described_class::SUB_AREAS["furumachi"][:names])
       end
     end
 
     context "nagaoka を渡した場合" do
-      it "area / genre / sub_area / area_id を含む Hash を返す" do
+      it "area / genre / sub_area / area_id / area_names を含む Hash を返す" do
         result = service.call("nagaoka")
 
         expect(result[:genre]).to eq("居酒屋 バー")
@@ -77,6 +80,7 @@ RSpec.describe OmakaseService do
         expect(result[:keyword]).to be_nil
         expect(described_class::SUB_AREAS["nagaoka"][:names]).to include(result[:sub_area])
         expect(result[:area]).to eq("長岡市 #{result[:sub_area]}")
+        expect(result[:area_names]).to contain_exactly(*described_class::SUB_AREAS["nagaoka"][:names])
       end
     end
 

@@ -49,6 +49,16 @@ Skills are located in `.claude/skills/kiro-*/SKILL.md`
 - `kiro-verify-completion` — fresh-evidence gate before success or completion claims
 - **If there is even a 1% chance a skill applies to the current task, invoke it.** Do not skip skills because the task seems simple.
 
+### disable-model-invocation スキルの実行方法
+`disable-model-invocation: true` が設定されたスキル（例: `kiro-discovery`）は **`Skill` ツールで呼び出してはいけない**。`Skill` ツールはサブエージェント（別モデル呼び出し）として実行するため `Error: Skill X cannot be used with Skill tool due to disable-model-invocation` が発生する。
+
+このフラグが付いているスキルは、ユーザーとの対話が必要なためメインの会話コンテキストで実行する設計になっている。**正しい実行方法：対象スキルの `SKILL.md` を `Read` ツールで読み込み、その手順をインラインで直接実行する。**
+
+対象スキルの確認方法：
+```bash
+grep -l "disable-model-invocation: true" .claude/skills/*/SKILL.md
+```
+
 ## Development Rules
 - 3-phase approval workflow: Requirements → Design → Tasks → Implementation
 - Human review required each phase; use `-y` only for intentional fast-track
