@@ -122,9 +122,9 @@
   - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.3_
   - _Boundary: OmakaseButtons Component_
 
-- [ ] 7. Validation: App.tsx 統合と旧ファイル削除
+- [x] 7. Validation: App.tsx 統合と旧ファイル削除
   _Depends: 4.2, 5.1, 6.1_
-- [ ] 7.1 App.tsx に handleOmakase を追加し OmakaseButtons に差し替える
+- [x] 7.1 App.tsx に handleOmakase を追加し OmakaseButtons に差し替える
   - `import OmakaseButton from './components/OmakaseButton'` と `import { omakasePresets } from './config/omakasePresets'` を削除し、`OmakaseButtons`・`omakaseAreas`・`fetchOmakase` に差し替える
   - `handleOmakase(areaId: OmakaseAreaId)` を追加する: `setQuery('')`・既存 state リセット・`fetchOmakase(areaId)` 呼び出し・`setRecommendations / setOtherCandidates / setParsedConditions` 更新・catch でエラー設定・finally で `setIsLoading(false)`
   - `addToHistory` を `handleOmakase` 内で呼ばない（検索履歴に追加しない）
@@ -132,7 +132,7 @@
   - `docker compose exec frontend pnpm build` で TypeScript エラーなしにビルド通過
   - _Requirements: 1.4, 3.1, 3.2, 4.1, 4.2, 4.3, 4.4, 5.2_
 
-- [ ] 7.2 旧ファイルを削除し全テストの通過を確認する
+- [x] 7.2 旧ファイルを削除し全テストの通過を確認する
   - `frontend/src/components/OmakaseButton.tsx` を削除する
   - `frontend/src/components/OmakaseButton.test.tsx` を削除する
   - `frontend/src/config/omakasePresets.ts` を削除する
