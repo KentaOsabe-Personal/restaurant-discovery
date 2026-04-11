@@ -158,7 +158,25 @@ RSpec.describe RecommendationService do
       end
     end
 
-    context "エラーハンドリング" do
+    context "min_count / max_count を指定した場合" do
+    let(:places) { [ build_place(name: "テスト店舗") ] }
+
+    it "min_count: 5, max_count: 5 のとき OpenAI へのシステムプロンプトに「5〜5 件」が含まれる" do
+      stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+
+      service.call(places, "テスト", min_count: 5, max_count: 5)
+
+      expect(
+        a_request(:post, openai_endpoint).with { |req|
+          body = JSON.parse(req.body)
+          system_message = body["messages"].find { |m| m["role"] == "system" }
+          system_message["content"].include?("5〜5 件")
+        }
+      ).to have_been_made
+    end
+  end
+
+  context "エラーハンドリング" do
       let(:places) { [ build_place(name: "テスト店舗") ] }
 
       it "4xx エラーで RecommendationError を raise する" do
