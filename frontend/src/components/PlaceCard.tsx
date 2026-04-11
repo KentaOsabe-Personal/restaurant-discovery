@@ -1,6 +1,6 @@
 import type { Candidate } from '../types/search';
 
-export type PlaceCardProps = Candidate & { reason?: string };
+export type PlaceCardProps = Candidate & { reason?: string; isSelected?: boolean; onSelect?: () => void };
 
 const PRICE_LEVEL_MAP: Record<string, string> = {
   PRICE_LEVEL_INEXPENSIVE: '¥',
@@ -19,13 +19,16 @@ function buildTabelogSearchUrl(name: string): string | null {
   return `https://tabelog.com/niigata/rstLst/?vs=1&sk=${encodeURIComponent(name.trim())}`;
 }
 
-function PlaceCard({ name, rating, price_level, address, google_maps_url, reason }: PlaceCardProps) {
+function PlaceCard({ name, rating, price_level, address, google_maps_url, reason, isSelected, onSelect }: PlaceCardProps) {
   const formattedPriceLevel = formatPriceLevel(price_level);
   const safeMapsUrl = google_maps_url.startsWith('https://') ? google_maps_url : '#';
   const tabelogUrl = buildTabelogSearchUrl(name);
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
+    <div
+      className={`bg-white rounded-lg shadow p-4${isSelected ? ' ring-2 ring-orange-400' : ''}`}
+      onClick={onSelect}
+    >
       <h3 className="text-lg font-bold mb-1">{name}</h3>
       <p className="text-sm text-gray-500 mb-2">{address}</p>
       {reason !== undefined && <p className="text-base mb-3">{reason}</p>}

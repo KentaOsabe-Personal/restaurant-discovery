@@ -1,7 +1,7 @@
 class GooglePlacesService
   API_ENDPOINT = "https://places.googleapis.com/v1/places:searchText"
   API_KEY_PATH = "/google_places_apikey"
-  FIELD_MASK = "places.displayName,places.rating,places.priceLevel,places.formattedAddress,places.googleMapsUri"
+  FIELD_MASK = "places.displayName,places.rating,places.priceLevel,places.formattedAddress,places.googleMapsUri,places.location"
   PAGE_SIZE = 20
   VALID_PRICE_LEVELS = %w[
     PRICE_LEVEL_INEXPENSIVE
@@ -71,7 +71,9 @@ class GooglePlacesService
       rating: place["rating"],
       price_level: place["priceLevel"],
       address: place["formattedAddress"],
-      google_maps_url: place["googleMapsUri"]
+      google_maps_url: place["googleMapsUri"],
+      lat: place.dig("location", "latitude"),
+      lng: place.dig("location", "longitude")
     }
   end
 end

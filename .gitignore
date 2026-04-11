@@ -5,6 +5,8 @@
 /.vscode/
 openai_apikey
 google_places_apikey
+map_id
+memo.md
 
 # Claude Code local settings (user-specific, not for CI)
 .claude/settings.local.json

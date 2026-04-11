@@ -10,7 +10,9 @@ RSpec.describe "POST /api/search", type: :request do
         rating: 4.5,
         price_level: nil,
         address: "東京都渋谷区",
-        google_maps_url: "https://maps.google.com/?cid=1"
+        google_maps_url: "https://maps.google.com/?cid=1",
+        lat: 35.659,
+        lng: 139.700
       }
     ]
   end
@@ -22,6 +24,8 @@ RSpec.describe "POST /api/search", type: :request do
         price_level: nil,
         address: "東京都渋谷区",
         google_maps_url: "https://maps.google.com/?cid=1",
+        lat: 35.659,
+        lng: 139.700,
         reason: "渋谷のおすすめイタリアンです"
       }
     ]
@@ -46,6 +50,12 @@ RSpec.describe "POST /api/search", type: :request do
       expect(json["recommendations"].first).to include("name", "rating", "address", "google_maps_url", "reason")
       expect(json["parsed_conditions"]).to include("area" => "渋谷", "genre" => "イタリアン", "price_level" => nil, "keyword" => nil)
       expect(json["parsed_conditions"]).to have_key("keyword")
+    end
+
+    it "recommendations の各候補に lat/lng フィールドを含む" do
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      json = response.parsed_body
+      expect(json["recommendations"].first).to include("lat" => 35.659, "lng" => 139.700)
     end
 
     it "keyword が非 null の場合も parsed_conditions に含む" do
@@ -95,14 +105,14 @@ RSpec.describe "POST /api/search", type: :request do
   describe "other_candidates の差分計算" do
     let(:multi_places) do
       [
-        { name: "レストランA", rating: 4.5, price_level: nil, address: "東京都渋谷区", google_maps_url: "https://maps.google.com/?cid=1" },
-        { name: "レストランB", rating: 4.0, price_level: "¥¥", address: "東京都渋谷区2", google_maps_url: "https://maps.google.com/?cid=2" },
-        { name: "レストランC", rating: 3.8, price_level: "¥", address: "東京都渋谷区3", google_maps_url: "https://maps.google.com/?cid=3" }
+        { name: "レストランA", rating: 4.5, price_level: nil, address: "東京都渋谷区", google_maps_url: "https://maps.google.com/?cid=1", lat: 35.659, lng: 139.700 },
+        { name: "レストランB", rating: 4.0, price_level: "¥¥", address: "東京都渋谷区2", google_maps_url: "https://maps.google.com/?cid=2", lat: 35.660, lng: 139.701 },
+        { name: "レストランC", rating: 3.8, price_level: "¥", address: "東京都渋谷区3", google_maps_url: "https://maps.google.com/?cid=3", lat: nil, lng: nil }
       ]
     end
     let(:partial_recommendations) do
       [
-        { name: "レストランA", rating: 4.5, price_level: nil, address: "東京都渋谷区", google_maps_url: "https://maps.google.com/?cid=1", reason: "おすすめです" }
+        { name: "レストランA", rating: 4.5, price_level: nil, address: "東京都渋谷区", google_maps_url: "https://maps.google.com/?cid=1", lat: 35.659, lng: 139.700, reason: "おすすめです" }
       ]
     end
 

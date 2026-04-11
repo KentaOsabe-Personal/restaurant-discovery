@@ -7,6 +7,7 @@ import OtherCandidateSection from './components/OtherCandidateSection';
 import SearchHistoryChips from './components/SearchHistoryChips';
 import OmakaseButtons from './components/OmakaseButtons';
 import SearchConditionTags from './components/SearchConditionTags';
+import MapPanel from './components/MapPanel';
 import { omakaseAreas } from './config/omakaseAreas';
 import type { OmakaseAreaId } from './config/omakaseAreas';
 import { fetchOmakase } from './api/omakase';
@@ -20,7 +21,27 @@ function App() {
   const [showOtherCandidates, setShowOtherCandidates] = useState<boolean>(false);
   const [parsedConditions, setParsedConditions] = useState<ParsedConditions | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedGoogleMapsUrl, setSelectedGoogleMapsUrl] = useState<string | null>(null);
+  const [infoWindowVisible, setInfoWindowVisible] = useState<boolean>(false);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+
+  const effectiveOtherExpanded =
+    showOtherCandidates ||
+    Boolean(otherCandidates?.some((c) => c.google_maps_url === selectedGoogleMapsUrl));
+
+  function handleListSelect(googleMapsUrl: string): void {
+    setSelectedGoogleMapsUrl(googleMapsUrl);
+    setInfoWindowVisible(false);
+  }
+
+  function handleMarkerClick(googleMapsUrl: string): void {
+    setSelectedGoogleMapsUrl(googleMapsUrl);
+    setInfoWindowVisible(true);
+  }
+
+  function handleInfoWindowClose(): void {
+    setInfoWindowVisible(false);
+  }
 
   function handleHistorySelect(historyQuery: string): void {
     setQuery(historyQuery);
@@ -35,6 +56,8 @@ function App() {
     setOtherCandidates(null);
     setShowOtherCandidates(false);
     setParsedConditions(null);
+    setSelectedGoogleMapsUrl(null);
+    setInfoWindowVisible(false);
     try {
       const response = await searchPlaces(query);
       setRecommendations(response.recommendations);
@@ -55,6 +78,8 @@ function App() {
     setShowOtherCandidates(false);
     setParsedConditions(null);
     setQuery('');
+    setSelectedGoogleMapsUrl(null);
+    setInfoWindowVisible(false);
     try {
       const response = await fetchOmakase(areaId);
       setRecommendations(response.recommendations);
@@ -67,9 +92,11 @@ function App() {
     }
   }
 
+  const hasResults = recommendations !== null && recommendations.length > 0;
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className={hasResults ? 'flex h-screen overflow-hidden' : 'min-h-screen bg-gray-100'}>
+      <div className={hasResults ? 'w-1/2 overflow-y-auto p-4' : 'max-w-3xl mx-auto px-4 py-8'}>
         <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
@@ -84,17 +111,34 @@ function App() {
           <p className="text-center text-gray-400">AIのおすすめは見つかりませんでしたが、その他の候補があります</p>
         )}
         {recommendations !== null && recommendations.length > 0 && !isLoading && (
-          <RecommendationList recommendations={recommendations} />
+          <RecommendationList
+            recommendations={recommendations}
+            selectedGoogleMapsUrl={selectedGoogleMapsUrl}
+            onSelect={handleListSelect}
+          />
         )}
         {otherCandidates !== null && (
           <OtherCandidateSection
             candidates={otherCandidates}
-            isExpanded={showOtherCandidates}
-            onExpand={() => setShowOtherCandidates(true)}
+            isExpanded={effectiveOtherExpanded}
+            onExpandChange={setShowOtherCandidates}
             isSearchLoading={isLoading}
+            selectedGoogleMapsUrl={selectedGoogleMapsUrl}
+            onSelect={handleListSelect}
           />
         )}
       </div>
+      {hasResults && (
+        <div className="w-1/2 h-full">
+          <MapPanel
+            candidates={[...recommendations, ...(otherCandidates ?? [])]}
+            selectedGoogleMapsUrl={selectedGoogleMapsUrl}
+            infoWindowVisible={infoWindowVisible}
+            onMarkerClick={handleMarkerClick}
+            onInfoWindowClose={handleInfoWindowClose}
+          />
+        </div>
+      )}
     </div>
   );
 }

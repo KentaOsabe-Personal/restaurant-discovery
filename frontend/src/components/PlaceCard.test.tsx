@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import PlaceCard from './PlaceCard';
 
 const baseProps = {
@@ -8,6 +8,8 @@ const baseProps = {
   address: '東京都渋谷区1-1-1',
   google_maps_url: 'https://maps.google.com/?cid=123',
   reason: 'コスパが良くておすすめです',
+  lat: null,
+  lng: null,
 };
 
 describe('PlaceCard', () => {
@@ -132,6 +134,36 @@ describe('PlaceCard', () => {
     it('reason が指定された場合は推薦理由が表示される', () => {
       render(<PlaceCard {...baseProps} />);
       expect(screen.getByText('コスパが良くておすすめです')).toBeInTheDocument();
+    });
+  });
+
+  describe('Task 3.1 (search-result-map): 選択状態props', () => {
+    it('isSelected=true のとき ring-2 と ring-orange-400 クラスが適用される', () => {
+      const { container } = render(<PlaceCard {...baseProps} isSelected={true} />);
+      expect(container.firstChild).toHaveClass('ring-2');
+      expect(container.firstChild).toHaveClass('ring-orange-400');
+    });
+
+    it('isSelected=false のとき ring クラスが適用されない', () => {
+      const { container } = render(<PlaceCard {...baseProps} isSelected={false} />);
+      expect(container.firstChild).not.toHaveClass('ring-2');
+    });
+
+    it('isSelected が省略されたとき ring クラスが適用されない', () => {
+      const { container } = render(<PlaceCard {...baseProps} />);
+      expect(container.firstChild).not.toHaveClass('ring-2');
+    });
+
+    it('onSelect が渡されたときカードクリックでコールバックが呼ばれる', () => {
+      const onSelect = vi.fn();
+      const { container } = render(<PlaceCard {...baseProps} onSelect={onSelect} />);
+      fireEvent.click(container.firstChild!);
+      expect(onSelect).toHaveBeenCalledTimes(1);
+    });
+
+    it('onSelect が省略されたときクリックしてもエラーが発生しない', () => {
+      const { container } = render(<PlaceCard {...baseProps} />);
+      expect(() => fireEvent.click(container.firstChild!)).not.toThrow();
     });
   });
 
