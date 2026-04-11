@@ -8,13 +8,17 @@ const mockCandidate: OtherCandidate = {
   price_level: 'PRICE_LEVEL_MODERATE',
   address: '新潟市中央区1-1-1',
   google_maps_url: 'https://maps.google.com/?cid=456',
+  lat: null,
+  lng: null,
 };
 
 const defaultProps = {
   candidates: [mockCandidate],
   isExpanded: false,
-  onExpand: vi.fn(),
+  onExpandChange: vi.fn(),
   isSearchLoading: false,
+  selectedGoogleMapsUrl: null as string | null,
+  onSelect: vi.fn(),
 };
 
 describe('OtherCandidateSection', () => {
@@ -41,11 +45,11 @@ describe('OtherCandidateSection', () => {
       expect(screen.getByRole('button', { name: /もっと見る/ })).toBeInTheDocument();
     });
 
-    it('ボタンクリックで onExpand が呼ばれる', () => {
-      const onExpand = vi.fn();
-      render(<OtherCandidateSection {...defaultProps} onExpand={onExpand} />);
+    it('ボタンクリックで onExpandChange(true) が呼ばれる', () => {
+      const onExpandChange = vi.fn();
+      render(<OtherCandidateSection {...defaultProps} onExpandChange={onExpandChange} />);
       fireEvent.click(screen.getByRole('button', { name: /もっと見る/ }));
-      expect(onExpand).toHaveBeenCalledTimes(1);
+      expect(onExpandChange).toHaveBeenCalledWith(true);
     });
 
     it('isExpanded=true でボタンが非表示になる', () => {
@@ -73,6 +77,38 @@ describe('OtherCandidateSection', () => {
     it('isExpanded=false でも false のときリストは表示されない', () => {
       render(<OtherCandidateSection {...defaultProps} isExpanded={false} />);
       expect(screen.queryByText('候補食堂')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Task 3.3 (search-result-map): 選択状態props伝播', () => {
+    it('selectedGoogleMapsUrl と一致するカードに ring-2 クラスが適用される', () => {
+      const { container } = render(
+        <OtherCandidateSection
+          {...defaultProps}
+          isExpanded={true}
+          selectedGoogleMapsUrl="https://maps.google.com/?cid=456"
+        />
+      );
+      const card = container.querySelector('.ring-2');
+      expect(card).toBeInTheDocument();
+      expect(card).toHaveClass('ring-orange-400');
+    });
+
+    it('selectedGoogleMapsUrl が null の場合はカードがハイライトされない', () => {
+      const { container } = render(
+        <OtherCandidateSection {...defaultProps} isExpanded={true} selectedGoogleMapsUrl={null} />
+      );
+      expect(container.querySelector('.ring-2')).not.toBeInTheDocument();
+    });
+
+    it('展開時にカードクリックで onSelect が google_maps_url を引数として呼ばれる', () => {
+      const onSelect = vi.fn();
+      const { container } = render(
+        <OtherCandidateSection {...defaultProps} isExpanded={true} onSelect={onSelect} />
+      );
+      const card = container.querySelector('div.bg-white')!;
+      fireEvent.click(card);
+      expect(onSelect).toHaveBeenCalledWith('https://maps.google.com/?cid=456');
     });
   });
 });

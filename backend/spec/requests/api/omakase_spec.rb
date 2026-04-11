@@ -10,7 +10,9 @@ RSpec.describe "POST /api/omakase", type: :request do
         rating: 4.0,
         price_level: "PRICE_LEVEL_MODERATE",
         address: "新潟市中央区万代#{i}-1",
-        google_maps_url: "https://maps.google.com/?cid=#{i}"
+        google_maps_url: "https://maps.google.com/?cid=#{i}",
+        lat: 37.916 + (i * 0.001),
+        lng: 139.036 + (i * 0.001)
       }
     end
   end
@@ -40,6 +42,17 @@ RSpec.describe "POST /api/omakase", type: :request do
         expect(json).to have_key("other_candidates")
         expect(json).to have_key("parsed_conditions")
         expect(json).to have_key("omakase")
+      end
+
+      it "#{area_id} で recommendations の各候補に lat/lng フィールドを含む" do
+        post "/api/omakase", params: { area: area_id }.to_json, headers: valid_headers
+        json = response.parsed_body
+        next if json["recommendations"].empty?
+
+        json["recommendations"].each do |rec|
+          expect(rec).to have_key("lat")
+          expect(rec).to have_key("lng")
+        end
       end
 
       it "#{area_id} で other_candidates が空配列を返す" do
@@ -171,7 +184,9 @@ RSpec.describe "POST /api/omakase", type: :request do
             rating: 4.0,
             price_level: "PRICE_LEVEL_MODERATE",
             address: "新潟市中央区#{town}#{i}-1",
-            google_maps_url: "https://maps.google.com/?cid=ekinan#{i}"
+            google_maps_url: "https://maps.google.com/?cid=ekinan#{i}",
+            lat: 37.910 + (i * 0.001),
+            lng: 139.030 + (i * 0.001)
           }
         end
       end
@@ -183,7 +198,9 @@ RSpec.describe "POST /api/omakase", type: :request do
             rating: 4.0,
             price_level: "PRICE_LEVEL_MODERATE",
             address: "新潟市中央区#{town}#{i}-1",
-            google_maps_url: "https://maps.google.com/?cid=ekimae#{i}"
+            google_maps_url: "https://maps.google.com/?cid=ekimae#{i}",
+            lat: 37.920 + (i * 0.001),
+            lng: 139.040 + (i * 0.001)
           }
         end
       end
@@ -223,7 +240,9 @@ RSpec.describe "POST /api/omakase", type: :request do
             rating: 4.0,
             price_level: "PRICE_LEVEL_MODERATE",
             address: "新潟市中央区#{town}#{i}-1",
-            google_maps_url: "https://maps.google.com/?cid=ekimae#{i}"
+            google_maps_url: "https://maps.google.com/?cid=ekimae#{i}",
+            lat: 37.920 + (i * 0.001),
+            lng: 139.040 + (i * 0.001)
           }
         end
         allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(ekimae_only)
@@ -241,6 +260,8 @@ RSpec.describe "POST /api/omakase", type: :request do
       end
     end
   end
+
+
 
   describe "エラーハンドリング" do
     it "GooglePlacesError が発生したとき 502 を返す" do

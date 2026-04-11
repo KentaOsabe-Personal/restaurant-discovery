@@ -20,7 +20,8 @@ RSpec.describe GooglePlacesService do
             "rating" => 4.2,
             "priceLevel" => "PRICE_LEVEL_MODERATE",
             "formattedAddress" => "東京都渋谷区道玄坂1-1",
-            "googleMapsUri" => "https://maps.google.com/?cid=123"
+            "googleMapsUri" => "https://maps.google.com/?cid=123",
+            "location" => { "latitude" => 35.659, "longitude" => 139.700 }
           }
         ])
 
@@ -37,9 +38,26 @@ RSpec.describe GooglePlacesService do
             rating: 4.2,
             price_level: "PRICE_LEVEL_MODERATE",
             address: "東京都渋谷区道玄坂1-1",
-            google_maps_url: "https://maps.google.com/?cid=123"
+            google_maps_url: "https://maps.google.com/?cid=123",
+            lat: 35.659,
+            lng: 139.700
           }
         ])
+      end
+
+      it "location フィールドがない場合 lat/lng に nil を返す" do
+        stub_places_success([
+          {
+            "displayName" => { "text" => "テスト店", "languageCode" => "ja" },
+            "rating" => 4.0,
+            "googleMapsUri" => "https://maps.google.com/?cid=999"
+          }
+        ])
+
+        result = service.call(area: "渋谷", genre: nil, price_level: nil, keyword: nil)
+
+        expect(result.first[:lat]).to be_nil
+        expect(result.first[:lng]).to be_nil
       end
 
       it "textQuery に area, genre, keyword を結合する" do
@@ -132,7 +150,7 @@ RSpec.describe GooglePlacesService do
 
         expect(
           a_request(:post, places_endpoint).with(
-            headers: { "X-Goog-FieldMask" => "places.displayName,places.rating,places.priceLevel,places.formattedAddress,places.googleMapsUri" }
+            headers: { "X-Goog-FieldMask" => "places.displayName,places.rating,places.priceLevel,places.formattedAddress,places.googleMapsUri,places.location" }
           )
         ).to have_been_made
       end

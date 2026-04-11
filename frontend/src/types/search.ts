@@ -13,6 +13,8 @@ export type Candidate = {
   price_level: string | null;
   address: string;
   google_maps_url: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 /** AIが推薦した店舗（理由付き） */

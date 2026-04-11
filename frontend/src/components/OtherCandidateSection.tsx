@@ -4,11 +4,13 @@ import PlaceCard from './PlaceCard';
 interface OtherCandidateSectionProps {
   candidates: OtherCandidate[];
   isExpanded: boolean;
-  onExpand: () => void;
+  onExpandChange: (expanded: boolean) => void;
   isSearchLoading: boolean;
+  selectedGoogleMapsUrl: string | null;
+  onSelect: (url: string) => void;
 }
 
-function OtherCandidateSection({ candidates, isExpanded, onExpand, isSearchLoading }: OtherCandidateSectionProps) {
+function OtherCandidateSection({ candidates, isExpanded, onExpandChange, isSearchLoading, selectedGoogleMapsUrl, onSelect }: OtherCandidateSectionProps) {
   if (candidates.length === 0 || isSearchLoading) {
     return null;
   }
@@ -17,7 +19,7 @@ function OtherCandidateSection({ candidates, isExpanded, onExpand, isSearchLoadi
     return (
       <div className="mt-4 text-center">
         <button
-          onClick={onExpand}
+          onClick={() => onExpandChange(true)}
           className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-sm font-medium transition-colors"
         >
           もっと見る
@@ -31,7 +33,12 @@ function OtherCandidateSection({ candidates, isExpanded, onExpand, isSearchLoadi
       <h2 className="text-lg font-semibold text-gray-700 mb-3">その他の候補</h2>
       <div className="flex flex-col gap-4">
         {candidates.map((candidate) => (
-          <PlaceCard key={candidate.google_maps_url} {...candidate} />
+          <PlaceCard
+            key={candidate.google_maps_url}
+            {...candidate}
+            isSelected={candidate.google_maps_url === selectedGoogleMapsUrl}
+            onSelect={() => onSelect(candidate.google_maps_url)}
+          />
         ))}
       </div>
     </div>

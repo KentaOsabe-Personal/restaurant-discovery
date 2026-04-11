@@ -1,6 +1,6 @@
 import type { Candidate } from '../types/search';
 
-export type PlaceCardProps = Candidate & { reason?: string };
+export type PlaceCardProps = Candidate & { reason?: string; isSelected?: boolean; onSelect?: () => void };
 
 const PRICE_LEVEL_MAP: Record<string, string> = {
   PRICE_LEVEL_INEXPENSIVE: '¥',
@@ -19,13 +19,16 @@ function buildTabelogSearchUrl(name: string): string | null {
   return `https://tabelog.com/niigata/rstLst/?vs=1&sk=${encodeURIComponent(name.trim())}`;
 }
 
-function PlaceCard({ name, rating, price_level, address, google_maps_url, reason }: PlaceCardProps) {
+function PlaceCard({ name, rating, price_level, address, google_maps_url, reason, isSelected, onSelect }: PlaceCardProps) {
   const formattedPriceLevel = formatPriceLevel(price_level);
   const safeMapsUrl = google_maps_url.startsWith('https://') ? google_maps_url : '#';
   const tabelogUrl = buildTabelogSearchUrl(name);
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
+    <div
+      className={`bg-white rounded-lg shadow p-4${isSelected ? ' ring-2 ring-orange-400' : ''}`}
+      onClick={onSelect}
+    >
       <h3 className="text-lg font-bold mb-1">{name}</h3>
       <p className="text-sm text-gray-500 mb-2">{address}</p>
       {reason !== undefined && <p className="text-base mb-3">{reason}</p>}
@@ -34,11 +37,11 @@ function PlaceCard({ name, rating, price_level, address, google_maps_url, reason
         {formattedPriceLevel !== null && <span className="inline-block bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded">{formattedPriceLevel}</span>}
       </div>
       <div className="flex flex-wrap gap-3 mt-2">
-        <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+        <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm" onClick={(e) => e.stopPropagation()}>
           Google Mapsで見る
         </a>
         {tabelogUrl && (
-          <a href={tabelogUrl} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline text-sm">
+          <a href={tabelogUrl} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline text-sm" onClick={(e) => e.stopPropagation()}>
             食べログで見る
           </a>
         )}
