@@ -4,11 +4,9 @@ import { searchPlaces } from './api/search';
 import SearchInput from './components/SearchInput';
 import RecommendationList from './components/RecommendationList';
 import OtherCandidateSection from './components/OtherCandidateSection';
-import QuickSearchButtons from './components/QuickSearchButtons';
 import SearchHistoryChips from './components/SearchHistoryChips';
 import OmakaseButtons from './components/OmakaseButtons';
 import SearchConditionTags from './components/SearchConditionTags';
-import { quickSearchPresets } from './config/quickSearchPresets';
 import { omakaseAreas } from './config/omakaseAreas';
 import type { OmakaseAreaId } from './config/omakaseAreas';
 import { fetchOmakase } from './api/omakase';
@@ -23,11 +21,6 @@ function App() {
   const [parsedConditions, setParsedConditions] = useState<ParsedConditions | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
-
-  function handleQuickSearch(presetQuery: string): void {
-    setQuery(presetQuery);
-    void handleSearch(presetQuery);
-  }
 
   function handleHistorySelect(historyQuery: string): void {
     setQuery(historyQuery);
@@ -80,7 +73,6 @@ function App() {
         <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
-        <QuickSearchButtons presets={quickSearchPresets} onSelect={handleQuickSearch} isLoading={isLoading} />
         <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />
         {!isLoading && parsedConditions !== null && <SearchConditionTags parsedConditions={parsedConditions} />}
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
