@@ -11,6 +11,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     post "search", to: "search#create"
+    post "omakase", to: "omakase#create"
   end
 
   # Defines the root path route ("/")

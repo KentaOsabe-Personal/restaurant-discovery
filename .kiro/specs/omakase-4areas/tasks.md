@@ -14,8 +14,8 @@
   - `docker compose exec backend bundle exec rspec spec/services/recommendation_service_spec.rb` で全テスト通過
   - _Requirements: 3.1_
 
-- [ ] 2. Core: OmakaseService の実装（バックエンド）
-- [ ] 2.1 (P) OmakaseService クラスとサブエリア定数を実装する
+- [x] 2. Core: OmakaseService の実装（バックエンド）
+- [x] 2.1 (P) OmakaseService クラスとサブエリア定数を実装する
   - `backend/app/services/omakase_service.rb` を新規作成する
   - `SUB_AREAS` 定数で4エリア（ekimae / ekinan / furumachi / nagaoka）とそれぞれのプレフィックス・サブエリア名配列を定義する
   - `NIGHT_GENRE = "居酒屋 バー"` 定数を定義する
@@ -25,7 +25,7 @@
   - _Requirements: 2.1, 2.2, 2.3_
   - _Boundary: OmakaseService_
 
-- [ ] 2.2 (P) OmakaseService の単体テストを作成する
+- [x] 2.2 (P) OmakaseService の単体テストを作成する
   - `backend/spec/services/omakase_service_spec.rb` を新規作成する
   - 4エリア各 ID で `:area` / `:genre` / `:sub_area` / `:area_id` が正しく返ることを検証する
   - 未知 area_id で `OmakaseService::UnknownArea` を raise することを検証する
@@ -35,15 +35,15 @@
   - _Requirements: 2.1, 2.2, 2.3_
   - _Boundary: OmakaseService_
 
-- [ ] 3. Core: フロントエンド型定義と設定ファイル
-- [ ] 3.1 (P) OmakaseResponse 型を search.ts に追加する
+- [x] 3. Core: フロントエンド型定義と設定ファイル
+- [x] 3.1 (P) OmakaseResponse 型を search.ts に追加する
   - `frontend/src/types/search.ts` に `OmakaseMeta = { area_id: string; sub_area: string }` を追加する
   - `OmakaseResponse = SearchResponse & { omakase: OmakaseMeta }` を追加する
   - `docker compose exec frontend pnpm build` で TypeScript エラーなしにビルドが通過する
   - _Requirements: 3.1, 3.2_
   - _Boundary: Frontend Types_
 
-- [ ] 3.2 (P) omakaseAreas 設定ファイルと OmakaseAreaId 型を作成する
+- [x] 3.2 (P) omakaseAreas 設定ファイルと OmakaseAreaId 型を作成する
   - `frontend/src/config/omakaseAreas.ts` を新規作成する
   - `OmakaseAreaId = 'ekimae' | 'ekinan' | 'furumachi' | 'nagaoka'` を export する
   - `OmakaseArea = { id: OmakaseAreaId; label: string }` を export する
@@ -52,16 +52,16 @@
   - _Requirements: 1.1_
   - _Boundary: Frontend Config_
 
-- [ ] 4. Integration: Api::OmakaseController とルーティングの実装
+- [x] 4. Integration: Api::OmakaseController とルーティングの実装
   _Depends: 1.1, 2.1_
-- [ ] 4.1 routes.rb にエンドポイントを追加しルーティングspecを作成する
+- [x] 4.1 routes.rb にエンドポイントを追加しルーティングspecを作成する
   - `backend/config/routes.rb` の `namespace :api` 内に `post "omakase", to: "omakase#create"` を追加する
   - `backend/spec/routing/api/omakase_routing_spec.rb` を新規作成し、`POST /api/omakase` が `api/omakase#create` にルーティングされることを検証する
   - `docker compose exec backend bin/rails routes | grep omakase` でルートが出力される
   - `docker compose exec backend bundle exec rspec spec/routing/api/omakase_routing_spec.rb` で通過
   - _Requirements: 5.3_
 
-- [ ] 4.2 Api::OmakaseController を実装する
+- [x] 4.2 Api::OmakaseController を実装する
   - `backend/app/controllers/api/omakase_controller.rb` を新規作成する
   - `area` パラメータが非文字列または空文字のとき 422 を返すバリデーションを実装する
   - `OmakaseService.new.call(area_id)` → `GooglePlacesService.new.call(conditions)` → `places.sample(5)` → `RecommendationService.new.call(sampled, query, min_count: 5, max_count: 5)` のパイプラインを実装する
@@ -71,7 +71,7 @@
   - `rescue_from OmakaseService::UnknownArea → 422`, `rescue_from GooglePlacesError, RecommendationError → 502`, `rescue_from StandardError → 500` を実装する
   - _Requirements: 2.4, 2.5, 3.3, 4.4, 5.1_
 
-- [ ] 4.3 OmakaseController のリクエスト spec を作成する
+- [x] 4.3 OmakaseController のリクエスト spec を作成する
   - `backend/spec/requests/api/omakase_spec.rb` を新規作成する
   - 4エリア各 ID で 200 OK、レスポンスに `recommendations` / `other_candidates: []` / `parsed_conditions` / `omakase` キーを含むことを検証する
   - `GooglePlacesService` に20件を返すモックを設定し、`RecommendationService` に渡される件数が ≤ 5 であることを検証する
@@ -82,9 +82,9 @@
   - `docker compose exec backend bundle exec rspec spec/requests/api/omakase_spec.rb` で全テスト通過
   - _Requirements: 2.4, 2.5, 3.3, 4.4, 5.1, 5.3_
 
-- [ ] 5. Integration: fetchOmakase API 関数の実装とテスト（フロントエンド）
+- [x] 5. Integration: fetchOmakase API 関数の実装とテスト（フロントエンド）
   _Depends: 3.1_
-- [ ] 5.1 (P) fetchOmakase 関数を実装する
+- [x] 5.1 (P) fetchOmakase 関数を実装する
   - `frontend/src/api/omakase.ts` を新規作成する
   - `POST /api/omakase` に `{ area: areaId }` を JSON で送信し `OmakaseResponse` を返す async 関数を実装する
   - `response.ok` でない場合は `throw new Error(`HTTP error: ${response.status}`)` を投げる
@@ -92,7 +92,7 @@
   - _Requirements: 2.1, 2.4_
   - _Boundary: fetchOmakase API Client_
 
-- [ ] 5.2 (P) fetchOmakase のテストを作成する
+- [x] 5.2 (P) fetchOmakase のテストを作成する
   - `frontend/src/api/omakase.test.ts` を新規作成し `vi.stubGlobal('fetch', ...)` パターンで実装する
   - 200 OK のとき `OmakaseResponse` を resolve することを検証する
   - 正しいエンドポイント・ヘッダー・ボディ（`{ area: 'ekimae' }` 等）でリクエストが送信されることを検証する
@@ -101,9 +101,9 @@
   - _Requirements: 2.1, 4.4_
   - _Boundary: fetchOmakase API Client_
 
-- [ ] 6. Integration: OmakaseButtons コンポーネントの実装とテスト
+- [x] 6. Integration: OmakaseButtons コンポーネントの実装とテスト
   _Depends: 3.2_
-- [ ] 6.1 (P) OmakaseButtons コンポーネントを実装する
+- [x] 6.1 (P) OmakaseButtons コンポーネントを実装する
   - `frontend/src/components/OmakaseButtons.tsx` を新規作成する
   - `OmakaseButtonsProps = { areas: readonly OmakaseArea[]; onSelect: (areaId: OmakaseAreaId) => void; isLoading: boolean }` を定義する
   - `areas` をループして各エリアのボタンを生成し、クリック時に `onSelect(area.id)` を呼ぶ
@@ -112,7 +112,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 4.1, 4.3_
   - _Boundary: OmakaseButtons Component_
 
-- [ ] 6.2 (P) OmakaseButtons のテストを作成する
+- [x] 6.2 (P) OmakaseButtons のテストを作成する
   - `frontend/src/components/OmakaseButtons.test.tsx` を新規作成する
   - 4ボタンのラベル（「新潟駅前でおすすめ」等）が正しく描画されることを検証する
   - `isLoading=true` で全ボタンが disabled になることを検証する
