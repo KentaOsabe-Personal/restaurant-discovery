@@ -2,8 +2,8 @@ class OmakaseService
   UnknownArea = Class.new(StandardError)
 
   SUB_AREAS = {
-    "ekimae"    => { prefix: "新潟市中央区", names: %w[万代 弁天 花園 東大通 万代シテイ 天神 明石] },
-    "ekinan"    => { prefix: "新潟市中央区", names: %w[けやき通り 米山 笹口 天神尾 南笹口 鐙] },
+    "ekimae"    => { prefix: "新潟市中央区", names: %w[万代 弁天 花園 東大通 万代シテイ 明石] },
+    "ekinan"    => { prefix: "新潟市中央区", names: %w[天神 けやき通り 米山 笹口 天神尾 南笹口 鐙] },
     "furumachi" => { prefix: "新潟市中央区", names: %w[古町通 西堀 東堀 本町 上古町 古町8番町 古町9番町] },
     "nagaoka"   => { prefix: "長岡市",       names: %w[大手通 殿町 表町 城内町 坂之上町] }
   }.freeze
@@ -29,7 +29,8 @@ class OmakaseService
       price_level: nil,
       keyword:     nil,
       sub_area:    sub_area,
-      area_id:     area_id
+      area_id:     area_id,
+      area_names:  config[:names]
     }
   end
 end

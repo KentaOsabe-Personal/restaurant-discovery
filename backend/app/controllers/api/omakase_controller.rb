@@ -31,7 +31,14 @@ module Api
         return
       end
 
-      sampled = places.sample(5)
+      filtered = filter_by_area(places, conditions[:area_names])
+      if filtered.empty?
+        Rails.logger.warn("OmakaseController: area filter reduced results to 0 (area_id=#{conditions[:area_id]}, sub_area=#{conditions[:sub_area]})")
+        render json: build_response([], conditions), status: :ok
+        return
+      end
+
+      sampled = filtered.sample(5)
       query = "#{conditions[:sub_area]}で夜の居酒屋・バーおまかせ"
       recommendations = RecommendationService.new.call(sampled, query, min_count: 5, max_count: 5)
 
@@ -39,6 +46,12 @@ module Api
     end
 
     private
+
+    def filter_by_area(places, area_names)
+      places.select do |place|
+        area_names.any? { |name| place[:address].to_s.include?(name) }
+      end
+    end
 
     def build_response(recommendations, conditions)
       {

@@ -162,6 +162,86 @@ RSpec.describe "POST /api/omakase", type: :request do
     end
   end
 
+  describe "エリアフィルタリング" do
+    context "ekinan 指定時に ekimae 住所の店が混在している場合" do
+      let(:ekinan_places) do
+        %w[天神 笹口 米山].map.with_index(1) do |town, i|
+          {
+            name: "ekinan店#{i}",
+            rating: 4.0,
+            price_level: "PRICE_LEVEL_MODERATE",
+            address: "新潟市中央区#{town}#{i}-1",
+            google_maps_url: "https://maps.google.com/?cid=ekinan#{i}"
+          }
+        end
+      end
+
+      let(:ekimae_places) do
+        %w[万代 弁天].map.with_index(1) do |town, i|
+          {
+            name: "ekimae店#{i}",
+            rating: 4.0,
+            price_level: "PRICE_LEVEL_MODERATE",
+            address: "新潟市中央区#{town}#{i}-1",
+            google_maps_url: "https://maps.google.com/?cid=ekimae#{i}"
+          }
+        end
+      end
+
+      before do
+        allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(ekinan_places + ekimae_places)
+        allow_any_instance_of(RecommendationService).to receive(:call) { |_inst, sampled, _q, **_kw| sampled.map { |p| p.merge(reason: "テスト") } }
+      end
+
+      it "ekimae 住所の店がレコメンドに含まれない" do
+        post "/api/omakase", params: { area: "ekinan" }.to_json, headers: valid_headers
+        recommendations = response.parsed_body["recommendations"]
+        ekimae_keywords = OmakaseService::SUB_AREAS["ekimae"][:names]
+        recommendations.each do |rec|
+          ekimae_keywords.each do |keyword|
+            expect(rec["address"]).not_to include(keyword)
+          end
+        end
+      end
+
+      it "ekinan 住所の店のみレコメンドに含まれる" do
+        post "/api/omakase", params: { area: "ekinan" }.to_json, headers: valid_headers
+        recommendations = response.parsed_body["recommendations"]
+        expect(recommendations).not_to be_empty
+        ekinan_keywords = OmakaseService::SUB_AREAS["ekinan"][:names]
+        recommendations.each do |rec|
+          expect(ekinan_keywords.any? { |kw| rec["address"].include?(kw) }).to be true
+        end
+      end
+    end
+
+    context "フィルタ後に候補が0件になった場合" do
+      before do
+        ekimae_only = %w[万代 弁天].map.with_index(1) do |town, i|
+          {
+            name: "ekimae店#{i}",
+            rating: 4.0,
+            price_level: "PRICE_LEVEL_MODERATE",
+            address: "新潟市中央区#{town}#{i}-1",
+            google_maps_url: "https://maps.google.com/?cid=ekimae#{i}"
+          }
+        end
+        allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(ekimae_only)
+      end
+
+      it "200 OK で recommendations が空配列を返す" do
+        post "/api/omakase", params: { area: "ekinan" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body["recommendations"]).to eq([])
+      end
+
+      it "RecommendationService を呼ばない" do
+        expect_any_instance_of(RecommendationService).not_to receive(:call)
+        post "/api/omakase", params: { area: "ekinan" }.to_json, headers: valid_headers
+      end
+    end
+  end
+
   describe "エラーハンドリング" do
     it "GooglePlacesError が発生したとき 502 を返す" do
       allow_any_instance_of(GooglePlacesService).to receive(:call).and_raise(GooglePlacesError, "places api failed")
