@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Recommendation, OtherCandidate, ParsedConditions } from './types/search';
 import { searchPlaces } from './api/search';
 import SearchInput from './components/SearchInput';
@@ -92,6 +92,11 @@ function App() {
     }
   }
 
+  const allCandidates = useMemo(
+    () => [...(recommendations ?? []), ...(otherCandidates ?? [])],
+    [recommendations, otherCandidates],
+  );
+
   const hasResults = recommendations !== null && recommendations.length > 0;
 
   return (
@@ -131,7 +136,7 @@ function App() {
       {hasResults && (
         <div className="w-1/2 h-full">
           <MapPanel
-            candidates={[...recommendations, ...(otherCandidates ?? [])]}
+            candidates={allCandidates}
             selectedGoogleMapsUrl={selectedGoogleMapsUrl}
             infoWindowVisible={infoWindowVisible}
             onMarkerClick={handleMarkerClick}

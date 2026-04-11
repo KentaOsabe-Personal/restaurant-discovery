@@ -37,11 +37,11 @@ function PlaceCard({ name, rating, price_level, address, google_maps_url, reason
         {formattedPriceLevel !== null && <span className="inline-block bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded">{formattedPriceLevel}</span>}
       </div>
       <div className="flex flex-wrap gap-3 mt-2">
-        <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">
+        <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm" onClick={(e) => e.stopPropagation()}>
           Google Mapsで見る
         </a>
         {tabelogUrl && (
-          <a href={tabelogUrl} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline text-sm">
+          <a href={tabelogUrl} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline text-sm" onClick={(e) => e.stopPropagation()}>
             食べログで見る
           </a>
         )}
