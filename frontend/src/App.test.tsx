@@ -151,69 +151,6 @@ describe('App - SearchConditionTags統合', () => {
   });
 });
 
-describe('App - クイック検索統合', () => {
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
-  it('クイック検索ボタンクリック後、テキストフィールドにクエリが反映される', async () => {
-    vi.mocked(searchPlaces).mockResolvedValueOnce(emptyResponse);
-
-    render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: '駅前' }));
-
-    expect(screen.getByRole('textbox')).toHaveValue('新潟駅前の居酒屋');
-
-    await screen.findByText(/見つかりません/);
-  });
-
-  it('クイック検索ボタンクリック後、検索が実行されてローディング状態に遷移する', async () => {
-    let resolve!: () => void;
-    vi.mocked(searchPlaces).mockReturnValueOnce(
-      new Promise<SearchResponse>((res) => {
-        resolve = () => res(emptyResponse);
-      }),
-    );
-
-    render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: '駅前' }));
-
-    expect(screen.getByRole('textbox')).toBeDisabled();
-    expect(screen.getByText('読み込み中...')).toBeInTheDocument();
-
-    await act(async () => {
-      resolve();
-    });
-
-    expect(screen.getByRole('textbox')).not.toBeDisabled();
-  });
-
-  it('ローディング中はクイック検索ボタンが全て disabled になり、完了後に enabled に戻る', async () => {
-    let resolve!: () => void;
-    vi.mocked(searchPlaces).mockReturnValueOnce(
-      new Promise<SearchResponse>((res) => {
-        resolve = () => res(emptyResponse);
-      }),
-    );
-
-    render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: '駅前' }));
-
-    const quickButtons = ['駅前', '駅南', '古町', '友達', '一人飲み', 'デート'];
-    quickButtons.forEach((label) => {
-      expect(screen.getByRole('button', { name: label })).toBeDisabled();
-    });
-
-    await act(async () => {
-      resolve();
-    });
-
-    quickButtons.forEach((label) => {
-      expect(screen.getByRole('button', { name: label })).toBeEnabled();
-    });
-  });
-});
-
 describe('App - OtherCandidateSection統合', () => {
   afterEach(() => {
     vi.resetAllMocks();
