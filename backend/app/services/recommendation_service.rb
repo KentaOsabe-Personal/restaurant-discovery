@@ -8,7 +8,7 @@ class RecommendationService
     最も適した %<min>d〜%<max>d 件を選んでください。
 
     ## 選定基準（優先順）
-    1. 条件との一致度: conditions の area/genre/price_level との一致を最優先にしてください
+    1. 条件との一致度: conditions が提供された場合は area/genre/price_level との一致を最優先にしてください
     2. 評価（rating）: 4.0以上を優秀、3.5〜4.0を普通、3.5未満は他に代替がなければ避けてください
     3. 価格帯（price_level）: conditions で価格帯が指定されている場合は必ず一致させてください
 

@@ -269,9 +269,14 @@ RSpec.describe RecommendationService do
     context "parsed_conditions の検証" do
       context "parsed_conditions を渡したとき" do
         it "OpenAI リクエストボディのユーザーメッセージに conditions キーが含まれる" do
-          places = [ build_place(name: "テスト店舗") ]
+          # rating 3.5 以上を min_count(3) 以上用意してprefilter通常パスを経由させる
+          places = [
+            build_place(name: "テスト店舗A", rating: 4.0),
+            build_place(name: "テスト店舗B", rating: 3.8),
+            build_place(name: "テスト店舗C", rating: 3.5)
+          ]
           parsed_conditions = { area: "渋谷", genre: "イタリアン", price_level: nil, keyword: nil }
-          stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+          stub_openai_success([ { name: "テスト店舗A", reason: "理由" } ])
 
           service.call(places, "テスト", parsed_conditions: parsed_conditions)
 
@@ -280,7 +285,7 @@ RSpec.describe RecommendationService do
               body = JSON.parse(req.body)
               user_message = body["messages"].find { |m| m["role"] == "user" }
               content = JSON.parse(user_message["content"])
-              content.key?("conditions")
+              content.key?("conditions") && content["candidates"].size == 3
             }
           ).to have_been_made
         end
