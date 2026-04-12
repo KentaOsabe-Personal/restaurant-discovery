@@ -4,11 +4,21 @@ class RecommendationService
 
   SYSTEM_PROMPT_TEMPLATE = <<~PROMPT
     あなたはレストラン推薦アシスタントです。
-    ユーザーのクエリと候補店リスト（candidates）を受け取り、最も適した %<min>d〜%<max>d 件を選んでください。
+    ユーザーの検索条件（conditions）と候補店リスト（candidates）を受け取り、
+    最も適した %<min>d〜%<max>d 件を選んでください。
 
-    選定基準: クエリとの関連性、評価（rating）、価格帯（price_level）
-    出力: candidates に含まれる name をそのまま使用してください（変更しないこと）
-    reason: 各店舗を推薦する理由を日本語で簡潔に説明してください
+    ## 選定基準（優先順）
+    1. 条件との一致度: conditions が提供された場合は area/genre/price_level との一致を最優先にしてください
+    2. 評価（rating）: 4.0以上を優秀、3.5〜4.0を普通、3.5未満は他に代替がなければ避けてください
+    3. 価格帯（price_level）: conditions で価格帯が指定されている場合は必ず一致させてください
+
+    ## 除外基準
+    - rating が null かつ同等の評価済み候補がある場合は除外
+    - conditions の価格帯と明確に合わない場合は除外
+
+    ## 出力規則
+    - candidates に含まれる name をそのまま使用してください（変更・省略・翻訳不可）
+    - reason: 他の候補と比べてなぜこの店を推薦するか、条件への合致点を含めて日本語で1〜2文で説明
   PROMPT
 
   RESPONSE_SCHEMA = {
@@ -38,9 +48,10 @@ class RecommendationService
     }
   }.freeze
 
-  def call(places, query, min_count: 3, max_count: 5)
+  def call(places, query, min_count: 3, max_count: 5, parsed_conditions: nil)
     return [] if places.empty?
 
+    places = prefilter(places, min_count)
     prompt = format(SYSTEM_PROMPT_TEMPLATE, min: min_count, max: max_count)
     client = build_client
     response = client.chat(
@@ -48,7 +59,7 @@ class RecommendationService
         model: MODEL,
         messages: [
           { role: "system", content: prompt },
-          { role: "user", content: build_user_message(places, query) }
+          { role: "user", content: build_user_message(places, query, parsed_conditions) }
         ],
         response_format: RESPONSE_SCHEMA
       }
@@ -79,9 +90,16 @@ class RecommendationService
     OpenAI::Client.new(access_token: api_key)
   end
 
-  def build_user_message(places, query)
+  def prefilter(places, min_count)
+    rated = places.select { |p| p[:rating] && p[:rating] >= 3.5 }
+    rated.size >= min_count ? rated : places
+  end
+
+  def build_user_message(places, query, parsed_conditions = nil)
     candidates = places.map { |p| p.slice(:name, :rating, :price_level, :address) }
-    { query: query, candidates: candidates }.to_json
+    payload = { query: query, candidates: candidates }
+    payload[:conditions] = parsed_conditions if parsed_conditions
+    payload.to_json
   end
 
   def merge_recommendations(places, response)
