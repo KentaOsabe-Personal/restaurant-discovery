@@ -16,7 +16,7 @@ function formatPriceLevel(priceLevel: string | null): string | null {
 
 function buildTabelogSearchUrl(name: string): string | null {
   if (name.trim() === '') return null;
-  return `https://tabelog.com/niigata/rstLst/?vs=1&sk=${encodeURIComponent(name.trim())}`;
+  return `https://tabelog.com/niigata/rstLst/?vs=1&sw=${encodeURIComponent(name.trim())}`;
 }
 
 function PlaceCard({ name, rating, price_level, address, google_maps_url, reason, isSelected, onSelect }: PlaceCardProps) {

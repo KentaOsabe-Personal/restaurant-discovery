@@ -111,7 +111,7 @@ describe('PlaceCard', () => {
       render(<PlaceCard {...baseProps} name="居酒屋" />);
       expect(screen.getByRole('link', { name: '食べログで見る' })).toHaveAttribute(
         'href',
-        `https://tabelog.com/niigata/rstLst/?vs=1&sk=${encodeURIComponent('居酒屋')}`
+        `https://tabelog.com/niigata/rstLst/?vs=1&sw=${encodeURIComponent('居酒屋')}`
       );
     });
   });
