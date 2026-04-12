@@ -40,7 +40,8 @@ module Api
 
       sampled = filtered.sample(5)
       query = "#{conditions[:sub_area]}で夜の居酒屋・バーおまかせ"
-      recommendations = RecommendationService.new.call(sampled, query, min_count: 5, max_count: 5)
+      parsed_conditions = { area: conditions[:sub_area], genre: "居酒屋・バー", price_level: nil, keyword: nil }
+      recommendations = RecommendationService.new.call(sampled, query, min_count: 5, max_count: 5, parsed_conditions: parsed_conditions)
 
       render json: build_response(recommendations, conditions), status: :ok
     end

@@ -190,6 +190,121 @@ RSpec.describe RecommendationService do
       end
     end
 
+    context "prefilter のテスト" do
+      context "rating 3.5 以上の候補が min_count 以上あるとき" do
+        it "rating < 3.5 の候補が AI リクエストに含まれない" do
+          places = [
+            build_place(name: "高評価店A", rating: 4.5),
+            build_place(name: "高評価店B", rating: 4.0),
+            build_place(name: "高評価店C", rating: 3.5),
+            build_place(name: "低評価店D", rating: 3.4),
+            build_place(name: "低評価店E", rating: 2.0)
+          ]
+          stub_openai_success([ { name: "高評価店A", reason: "理由" } ])
+
+          service.call(places, "テスト")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              user_message = body["messages"].find { |m| m["role"] == "user" }
+              content = JSON.parse(user_message["content"])
+              candidate_names = content["candidates"].map { |c| c["name"] }
+              !candidate_names.include?("低評価店D") && !candidate_names.include?("低評価店E")
+            }
+          ).to have_been_made
+        end
+      end
+
+      context "フィルタ後の候補数が min_count 未満のとき" do
+        it "全候補が AI に送信される（フォールバック）" do
+          places = [
+            build_place(name: "高評価店A", rating: 4.5),
+            build_place(name: "低評価店B", rating: 3.0),
+            build_place(name: "低評価店C", rating: 2.0)
+          ]
+          stub_openai_success([ { name: "高評価店A", reason: "理由" } ])
+
+          # min_count デフォルト 3 に対してフィルタ後は 1 件 → 全件フォールバック
+          service.call(places, "テスト")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              user_message = body["messages"].find { |m| m["role"] == "user" }
+              content = JSON.parse(user_message["content"])
+              candidate_names = content["candidates"].map { |c| c["name"] }
+              candidate_names.include?("低評価店B") && candidate_names.include?("低評価店C")
+            }
+          ).to have_been_made
+        end
+      end
+
+      context "rating が正確に 3.5 の候補" do
+        it "除外されない（境界値確認）" do
+          places = [
+            build_place(name: "境界値店A", rating: 3.5),
+            build_place(name: "境界値店B", rating: 3.5),
+            build_place(name: "境界値店C", rating: 3.5)
+          ]
+          stub_openai_success([ { name: "境界値店A", reason: "理由" } ])
+
+          service.call(places, "テスト")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              user_message = body["messages"].find { |m| m["role"] == "user" }
+              content = JSON.parse(user_message["content"])
+              candidate_names = content["candidates"].map { |c| c["name"] }
+              candidate_names.include?("境界値店A") &&
+                candidate_names.include?("境界値店B") &&
+                candidate_names.include?("境界値店C")
+            }
+          ).to have_been_made
+        end
+      end
+    end
+
+    context "parsed_conditions の検証" do
+      context "parsed_conditions を渡したとき" do
+        it "OpenAI リクエストボディのユーザーメッセージに conditions キーが含まれる" do
+          places = [ build_place(name: "テスト店舗") ]
+          parsed_conditions = { area: "渋谷", genre: "イタリアン", price_level: nil, keyword: nil }
+          stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+
+          service.call(places, "テスト", parsed_conditions: parsed_conditions)
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              user_message = body["messages"].find { |m| m["role"] == "user" }
+              content = JSON.parse(user_message["content"])
+              content.key?("conditions")
+            }
+          ).to have_been_made
+        end
+      end
+
+      context "parsed_conditions を渡さないとき（nil のとき）" do
+        it "OpenAI リクエストボディのユーザーメッセージに conditions キーが含まれない（後方互換）" do
+          places = [ build_place(name: "テスト店舗") ]
+          stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+
+          service.call(places, "テスト")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              user_message = body["messages"].find { |m| m["role"] == "user" }
+              content = JSON.parse(user_message["content"])
+              !content.key?("conditions")
+            }
+          ).to have_been_made
+        end
+      end
+    end
+
     context "エラーハンドリング" do
       let(:places) { [ build_place(name: "テスト店舗") ] }
 

@@ -41,7 +41,7 @@ module Api
         return
       end
 
-      recommendations = RecommendationService.new.call(places, query)
+      recommendations = RecommendationService.new.call(places, query, parsed_conditions: parsed_conditions)
 
       recommended_names = recommendations.map { |r| r[:name] }.to_set
       other_candidates = places.reject { |p| recommended_names.include?(p[:name]) }
