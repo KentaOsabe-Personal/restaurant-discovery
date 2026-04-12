@@ -15,6 +15,7 @@ port 5175              port 3001               port 3306
 - **フレームワーク**: React 19
 - **ビルドツール**: Vite 6
 - **スタイリング**: Tailwind CSS v4（`@tailwindcss/vite` プラグイン）
+- **地図**: `@vis.gl/react-google-maps`（Google Maps表示）
 - **テスト**: Vitest 3 + jsdom + Testing Library
 - **パッケージマネージャ**: pnpm
 
