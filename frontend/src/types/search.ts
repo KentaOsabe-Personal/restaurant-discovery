@@ -46,3 +46,11 @@ export type OmakaseMeta = {
 export type OmakaseResponse = SearchResponse & {
   omakase: OmakaseMeta;
 };
+
+export type RefineRequest = {
+  feedback: string;
+  original_query: string;
+  parsed_conditions: ParsedConditions | null;
+};
+
+export type RefineResponse = SearchResponse;

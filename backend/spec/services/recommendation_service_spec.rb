@@ -97,10 +97,10 @@ RSpec.describe RecommendationService do
         service.call(places, query)
       end
 
-      it "gpt-5-nano モデルを使用する" do
+      it "gpt-5.4-nano モデルを使用する" do
         expect(
           a_request(:post, openai_endpoint).with { |req|
-            JSON.parse(req.body)["model"] == "gpt-5-nano"
+            JSON.parse(req.body)["model"] == "gpt-5.4-nano"
           }
         ).to have_been_made
       end
@@ -304,6 +304,57 @@ RSpec.describe RecommendationService do
               user_message = body["messages"].find { |m| m["role"] == "user" }
               content = JSON.parse(user_message["content"])
               !content.key?("conditions")
+            }
+          ).to have_been_made
+        end
+      end
+    end
+
+    context "feedback 引数の検証" do
+      let(:places) { [ build_place(name: "テスト店舗", rating: 4.0) ] }
+      let(:query) { "古町で飲み会" }
+
+      context "feedback を渡したとき" do
+        it "システムプロンプトにフィードバックテキストが含まれる" do
+          stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+
+          service.call(places, query, feedback: "個室があると良い")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("個室があると良い")
+            }
+          ).to have_been_made
+        end
+
+        it "システムプロンプトにフィードバック最優先の指示が含まれる" do
+          stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+
+          service.call(places, query, feedback: "個室があると良い")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("最優先")
+            }
+          ).to have_been_made
+        end
+      end
+
+      context "feedback を渡さないとき（nil デフォルト）" do
+        it "既存動作が維持される（システムプロンプトにフィードバックセクションが含まれない）" do
+          stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+
+          service.call(places, query)
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              !system_message["content"].include?("ユーザーフィードバック")
             }
           ).to have_been_made
         end
