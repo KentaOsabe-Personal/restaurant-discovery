@@ -34,8 +34,8 @@
   - _Depends: 1.1, 1.2_
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 4.1, 4.2, 5.1_
 
-- [ ] 4. (P) Core - フロントエンドの API クライアントと入力コンポーネントを実装する
-- [ ] 4.1 (P) 再レコメンド API クライアント関数を実装する
+- [x] 4. (P) Core - フロントエンドの API クライアントと入力コンポーネントを実装する
+- [x] 4.1 (P) 再レコメンド API クライアント関数を実装する
   - `api/refine.ts` に `refinePlaces(request: RefineRequest): Promise<RefineResponse>` 関数を新規作成する
   - POST /api/refine に JSON ボディを送信し、既存の `searchPlaces` と同一のエラー処理パターン（レスポンス ok でない場合 Error をスロー）を適用する
   - TypeScript strict モード準拠、`any` 型不使用
@@ -44,7 +44,7 @@
   - _Requirements: 2.1_
   - _Boundary: api/refine.ts_
 
-- [ ] 4.2 (P) フィードバック入力コンポーネントを実装する
+- [x] 4.2 (P) フィードバック入力コンポーネントを実装する
   - `FeedbackInput.tsx` を新規作成し、`onSubmit: (feedback: string) => void` と `isLoading: boolean` の Props を定義する
   - Controlled input でフィードバックテキストを管理し、フォーム送信後に入力フィールドをリセットする
   - フィードバックが空または空白のみの場合に送信ボタンを無効化する
@@ -54,7 +54,7 @@
   - _Requirements: 1.1, 1.2, 1.3_
   - _Boundary: FeedbackInput コンポーネント_
 
-- [ ] 5. Integration - App.tsx に再レコメンド機能を統合する
+- [x] 5. Integration - App.tsx に再レコメンド機能を統合する
   - `isRefineLoading` state（boolean）を追加する
   - `handleRefine(feedback: string)` 関数を実装する：`refinePlaces` を呼び出し、成功時に `recommendations`・`otherCandidates`・`parsedConditions` を更新し「もっと見る」展開状態・地図選択状態をリセットする；エラー時は `error` state を設定し既存の結果表示は維持する
   - `recommendations` が 1 件以上あり初期検索が完了している状態のみ `FeedbackInput` を表示する
@@ -63,8 +63,8 @@
   - _Depends: 3, 4.1, 4.2_
   - _Requirements: 1.1, 1.4, 6.1, 6.2, 6.3, 7.1, 7.2, 7.3_
 
-- [ ] 6. Validation - テストを実装する
-- [ ] 6.1 (P) バックエンドリクエストスペックを実装する
+- [x] 6. Validation - テストを実装する
+- [x] 6.1 (P) バックエンドリクエストスペックを実装する
   - `spec/requests/api/refine_spec.rb` を新規作成する
   - 有効なリクエストで 200 と `recommendations`・`other_candidates`・`parsed_conditions` が返ることを検証するテストを追加する
   - 空 feedback で 422 が返ることを検証するテストを追加する
@@ -76,14 +76,14 @@
   - _Requirements: 2.1, 2.2, 2.3, 3.2, 3.3, 4.2_
   - _Boundary: RefineController_
 
-- [ ] 6.2 (P) RecommendationService の feedback テストケースを追加する
+- [x] 6.2 (P) RecommendationService の feedback テストケースを追加する
   - `spec/services/recommendation_service_spec.rb` に `feedback:` ありの場合にプロンプトにフィードバックテキストが含まれることを検証するテストを追加する
   - `feedback: nil`（デフォルト）の場合に既存動作が維持されることを検証するテストを追加する
   - `bundle exec rspec spec/services/recommendation_service_spec.rb` が全件グリーンであること
   - _Requirements: 5.2_
   - _Boundary: RecommendationService_
 
-- [ ] 6.3 (P) FeedbackInput コンポーネントテストを実装する
+- [x] 6.3 (P) FeedbackInput コンポーネントテストを実装する
   - `FeedbackInput.test.tsx` を新規作成する
   - 空入力時に送信ボタンが disabled であることを検証するテストを追加する
   - テキスト入力後に送信ボタンが有効になることを検証するテストを追加する

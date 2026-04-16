@@ -428,8 +428,9 @@ describe('App - 選択状態管理', () => {
     fireEvent.click(card!);
     expect(card).toHaveClass('ring-2');
 
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: '次の検索' } });
-    fireEvent.submit(screen.getByRole('search'));
+    const searchInput = screen.getByRole('textbox', { name: 'レストラン検索' });
+    fireEvent.change(searchInput, { target: { value: '次の検索' } });
+    fireEvent.submit(searchInput.closest('form')!);
 
     expect(screen.queryByText('レストランA')).toBeNull();
   });

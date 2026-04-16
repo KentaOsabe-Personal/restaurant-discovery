@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import type { Recommendation, OtherCandidate, ParsedConditions } from './types/search';
 import { searchPlaces } from './api/search';
+import { refinePlaces } from './api/refine';
 import SearchInput from './components/SearchInput';
 import RecommendationList from './components/RecommendationList';
 import OtherCandidateSection from './components/OtherCandidateSection';
 import SearchHistoryChips from './components/SearchHistoryChips';
 import OmakaseButtons from './components/OmakaseButtons';
 import SearchConditionTags from './components/SearchConditionTags';
+import FeedbackInput from './components/FeedbackInput';
 import MapPanel from './components/MapPanel';
 import { omakaseAreas } from './config/omakaseAreas';
 import type { OmakaseAreaId } from './config/omakaseAreas';
@@ -16,6 +18,7 @@ import { useSearchHistory } from './hooks/useSearchHistory';
 function App() {
   const [query, setQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isRefineLoading, setIsRefineLoading] = useState<boolean>(false);
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null);
   const [otherCandidates, setOtherCandidates] = useState<OtherCandidate[] | null>(null);
   const [showOtherCandidates, setShowOtherCandidates] = useState<boolean>(false);
@@ -92,6 +95,28 @@ function App() {
     }
   }
 
+  async function handleRefine(feedback: string): Promise<void> {
+    setIsRefineLoading(true);
+    setError(null);
+    try {
+      const response = await refinePlaces({
+        feedback,
+        original_query: query,
+        parsed_conditions: parsedConditions,
+      });
+      setRecommendations(response.recommendations);
+      setOtherCandidates(response.other_candidates);
+      setParsedConditions(response.parsed_conditions);
+      setShowOtherCandidates(false);
+      setSelectedGoogleMapsUrl(null);
+      setInfoWindowVisible(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '再レコメンドに失敗しました');
+    } finally {
+      setIsRefineLoading(false);
+    }
+  }
+
   const allCandidates = useMemo(
     () => [...(recommendations ?? []), ...(otherCandidates ?? [])],
     [recommendations, otherCandidates],
@@ -121,6 +146,9 @@ function App() {
             selectedGoogleMapsUrl={selectedGoogleMapsUrl}
             onSelect={handleListSelect}
           />
+        )}
+        {recommendations !== null && recommendations.length > 0 && !isLoading && (
+          <FeedbackInput onSubmit={handleRefine} isLoading={isRefineLoading} />
         )}
         {otherCandidates !== null && (
           <OtherCandidateSection
