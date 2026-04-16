@@ -1,5 +1,5 @@
 class RecommendationService
-  MODEL = "gpt-5-nano"
+  MODEL = "gpt-5.4-nano"
   API_KEY_PATH = "/openai_apikey"
 
   SYSTEM_PROMPT_TEMPLATE = <<~PROMPT
@@ -48,11 +48,11 @@ class RecommendationService
     }
   }.freeze
 
-  def call(places, query, min_count: 3, max_count: 5, parsed_conditions: nil)
+  def call(places, query, min_count: 3, max_count: 5, parsed_conditions: nil, feedback: nil)
     return [] if places.empty?
 
     places = prefilter(places, min_count)
-    prompt = format(SYSTEM_PROMPT_TEMPLATE, min: min_count, max: max_count)
+    prompt = build_system_prompt(min_count, max_count, feedback)
     client = build_client
     response = client.chat(
       parameters: {
@@ -84,6 +84,17 @@ class RecommendationService
   end
 
   private
+
+  def build_system_prompt(min, max, feedback)
+    base = format(SYSTEM_PROMPT_TEMPLATE, min: min, max: max)
+    return base if feedback.blank?
+
+    safe_feedback = feedback.truncate(500)
+    base + "\n\n## ユーザーフィードバック（必ず最優先で反映してください）\n" \
+          "前回の推薦に対して、ユーザーから以下のフィードバックがありました:\n" \
+          "「#{safe_feedback}」\n\n" \
+          "このフィードバックを他の選定基準より優先して反映してください。"
+  end
 
   def build_client
     api_key = File.read(API_KEY_PATH).strip
