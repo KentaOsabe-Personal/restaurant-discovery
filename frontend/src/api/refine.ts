@@ -8,7 +8,9 @@ export async function refinePlaces(request: RefineRequest): Promise<RefineRespon
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error: ${response.status}`);
+    const body = await response.json().catch(() => ({}));
+    const message = (body as { error?: string }).error ?? `HTTP error: ${response.status}`;
+    throw new Error(message);
   }
 
   return response.json() as Promise<RefineResponse>;

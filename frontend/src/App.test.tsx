@@ -1,9 +1,11 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 import { searchPlaces } from './api/search';
+import { refinePlaces } from './api/refine';
 import type { SearchResponse } from './types/search';
 
 vi.mock('./api/search');
+vi.mock('./api/refine');
 vi.mock('./components/MapPanel', () => ({
   default: ({
     candidates,
@@ -315,6 +317,122 @@ describe('App - 2カラムレイアウトとMapPanel統合', () => {
 
     await screen.findByRole('button', { name: 'もっと見る' });
     expect(screen.queryByTestId('map-panel')).toBeNull();
+  });
+});
+
+describe('App - refine-recommendation統合', () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  const baseRecommendation = {
+    name: 'テストレストラン',
+    rating: 4.5,
+    price_level: null,
+    address: '東京都渋谷区1-1-1',
+    google_maps_url: 'https://maps.google.com/test',
+    reason: 'おすすめ',
+    lat: 35.6595,
+    lng: 139.7004,
+  };
+
+  it('再レコメンド成功時に推薦結果・条件タグが更新される（Req 6.1）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [baseRecommendation],
+      other_candidates: [],
+      parsed_conditions: { area: '渋谷', genre: null, price_level: null, keyword: null },
+    });
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [{ ...baseRecommendation, name: '再推薦の店' }],
+      other_candidates: [],
+      parsed_conditions: { area: '渋谷', genre: null, price_level: null, keyword: '個室' },
+    });
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('テストレストラン');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: '個室があると良い' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+
+    await screen.findByText('再推薦の店');
+    expect(screen.queryByText('テストレストラン')).toBeNull();
+    expect(screen.getByText('キーワード: 個室')).toBeInTheDocument();
+  });
+
+  it('再レコメンドエラー時に既存の推薦結果が維持される（Req 7.3）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [baseRecommendation],
+      other_candidates: [],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+    vi.mocked(refinePlaces).mockRejectedValueOnce(new Error('HTTP error: 502'));
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('テストレストラン');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: '個室があると良い' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+
+    await screen.findByText('HTTP error: 502');
+    expect(screen.getByText('テストレストラン')).toBeInTheDocument();
+  });
+
+  it('再レコメンド後に「もっと見る」展開状態がリセットされる（Req 6.2）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [baseRecommendation],
+      other_candidates: [
+        {
+          name: '候補A',
+          rating: 4.0,
+          price_level: null,
+          address: '住所A',
+          google_maps_url: 'https://maps.google.com/a',
+          lat: null,
+          lng: null,
+        },
+      ],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [{ ...baseRecommendation, name: '再推薦の店' }],
+      other_candidates: [],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('テストレストラン');
+
+    fireEvent.click(screen.getByRole('button', { name: 'もっと見る' }));
+    expect(screen.getByText('候補A')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: '個室があると良い' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+
+    await screen.findByText('再推薦の店');
+    expect(screen.queryByText('候補A')).toBeNull();
+  });
+
+  it('FeedbackInputはrecommendations0件のとき非表示になる（Req 1.4）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce(emptyResponse);
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByText(/見つかりません/);
+    expect(screen.queryByRole('textbox', { name: 'フィードバック入力' })).toBeNull();
   });
 });
 

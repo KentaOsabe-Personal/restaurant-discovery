@@ -89,9 +89,10 @@ class RecommendationService
     base = format(SYSTEM_PROMPT_TEMPLATE, min: min, max: max)
     return base if feedback.blank?
 
+    safe_feedback = feedback.truncate(500)
     base + "\n\n## ユーザーフィードバック（必ず最優先で反映してください）\n" \
           "前回の推薦に対して、ユーザーから以下のフィードバックがありました:\n" \
-          "「#{feedback}」\n\n" \
+          "「#{safe_feedback}」\n\n" \
           "このフィードバックを他の選定基準より優先して反映してください。"
   end
 

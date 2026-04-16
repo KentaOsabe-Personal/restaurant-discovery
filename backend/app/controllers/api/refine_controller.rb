@@ -18,6 +18,11 @@ module Api
         return
       end
 
+      if feedback.length > 500
+        render json: { error: "feedback must be 500 characters or fewer" }, status: :unprocessable_content
+        return
+      end
+
       original_query = params[:original_query].to_s
       original_conditions = parse_conditions(params[:parsed_conditions])
 
@@ -54,7 +59,7 @@ module Api
     private
 
     def parse_conditions(raw)
-      return { area: nil, genre: nil, price_level: nil, keyword: nil } if raw.nil?
+      return { area: nil, genre: nil, price_level: nil, keyword: nil } unless raw.is_a?(ActionController::Parameters)
 
       raw.permit(:area, :genre, :price_level, :keyword).to_h.symbolize_keys
     end
