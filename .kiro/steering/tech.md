@@ -19,6 +19,11 @@ port 5175              port 3001               port 3306
 - **テスト**: Vitest 3 + jsdom + Testing Library
 - **パッケージマネージャ**: pnpm
 
+### フロントエンド実装パターン
+- 画面状態のオーケストレーションは現状 `App.tsx` に集約し、表示責務は `src/components/` に分離
+- API クライアントは `src/api/` にエンドポイント単位で配置し、`fetch` で `/api/search`・`/api/omakase`・`/api/refine` を呼び出す
+- 追加要望による再レコメンドは独立した `refine` API として扱い、初回検索と同じレスポンス形を保つ
+
 ### TypeScript 設定
 `strict: true`に加えて以下を有効化：
 - `noUnusedLocals` / `noUnusedParameters`
@@ -51,6 +56,11 @@ port 5175              port 3001               port 3306
 ### 外部API統合
 - **OpenAI API**（`ruby-openai ~> 8.3` gem）: 自然文解析・推薦生成に使用。モデル: `gpt-5-nano`
 - **Google Places API**（Faraday で直接HTTP）: テキスト検索で店舗を取得
+
+### API 応答パターン
+- Rails API は `render json:` を使う薄いエンドポイントとして実装
+- 検索系エンドポイントは `recommendations` / `other_candidates` / `parsed_conditions` を共通レスポンス形として返す
+- 外部API失敗は `502 Bad Gateway`、入力不正は `422 Unprocessable Content` を返す
 
 ### APIキー管理
 - APIキーはファイルとして Docker ボリュームマウント: `/openai_apikey`, `/google_places_apikey`
@@ -88,3 +98,4 @@ docker compose exec backend bin/brakeman --no-pager  # セキュリティ
 docker compose exec backend rails db:migrate  # マイグレーション
 docker compose exec backend bundle exec rspec # テスト
 ```
+_updated_at: 2026-04-18 (sync: refine API と共通 JSON レスポンス契約を反映)_
