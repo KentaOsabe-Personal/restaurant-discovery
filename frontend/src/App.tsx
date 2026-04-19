@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Recommendation, OtherCandidate, ParsedConditions } from './types/search';
+import type { Recommendation, OtherCandidate, ParsedConditions, SearchMode } from './types/search';
 import { searchPlaces } from './api/search';
 import { refinePlaces } from './api/refine';
 import SearchInput from './components/SearchInput';
@@ -10,12 +10,14 @@ import OmakaseButtons from './components/OmakaseButtons';
 import SearchConditionTags from './components/SearchConditionTags';
 import FeedbackInput from './components/FeedbackInput';
 import MapPanel from './components/MapPanel';
+import ModeTabs from './components/ModeTabs';
 import { omakaseAreas } from './config/omakaseAreas';
 import type { OmakaseAreaId } from './config/omakaseAreas';
 import { fetchOmakase } from './api/omakase';
 import { useSearchHistory } from './hooks/useSearchHistory';
 
 function App() {
+  const [activeTab, setActiveTab] = useState<SearchMode>('izakaya');
   const [query, setQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isRefineLoading, setIsRefineLoading] = useState<boolean>(false);
@@ -26,7 +28,19 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedGoogleMapsUrl, setSelectedGoogleMapsUrl] = useState<string | null>(null);
   const [infoWindowVisible, setInfoWindowVisible] = useState<boolean>(false);
-  const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+  const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory(activeTab);
+
+  function handleTabChange(mode: SearchMode): void {
+    setActiveTab(mode);
+    setQuery('');
+    setRecommendations(null);
+    setOtherCandidates(null);
+    setParsedConditions(null);
+    setError(null);
+    setShowOtherCandidates(false);
+    setSelectedGoogleMapsUrl(null);
+    setInfoWindowVisible(false);
+  }
 
   const effectiveOtherExpanded =
     showOtherCandidates ||
@@ -62,7 +76,7 @@ function App() {
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
     try {
-      const response = await searchPlaces(query);
+      const response = await searchPlaces(query, activeTab);
       setRecommendations(response.recommendations);
       setOtherCandidates(response.other_candidates);
       setParsedConditions(response.parsed_conditions);
@@ -103,6 +117,7 @@ function App() {
         feedback,
         original_query: query,
         parsed_conditions: parsedConditions,
+        mode: activeTab,
       });
       setRecommendations(response.recommendations);
       setOtherCandidates(response.other_candidates);
@@ -128,9 +143,10 @@ function App() {
     <div className={hasResults ? 'flex h-screen overflow-hidden' : 'min-h-screen bg-gray-100'}>
       <div className={hasResults ? 'w-1/2 overflow-y-auto p-4' : 'max-w-3xl mx-auto px-4 py-8'}>
         <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
+        <ModeTabs activeTab={activeTab} onTabChange={handleTabChange} />
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
-        <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />
+        {activeTab === 'izakaya' && <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />}
         {!isLoading && parsedConditions !== null && <SearchConditionTags parsedConditions={parsedConditions} />}
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
         {error !== null && !isLoading && <p className="text-red-600">{error}</p>}

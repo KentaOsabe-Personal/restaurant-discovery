@@ -21,6 +21,25 @@ class RecommendationService
     - reason: 他の候補と比べてなぜこの店を推薦するか、条件への合致点を含めて日本語で1〜2文で説明
   PROMPT
 
+  RAMEN_SYSTEM_PROMPT_TEMPLATE = <<~PROMPT
+    あなたはラーメン店推薦アシスタントです。
+    ユーザーの検索条件（conditions）と候補店リスト（candidates）を受け取り、
+    最も適した %<min>d〜%<max>d 件を選んでください。
+
+    ## 選定基準（優先順）
+    1. 条件との一致度: conditions が提供された場合は area/price_level との一致を最優先にしてください
+    2. ラーメン特徴: 味の系統（味噌・豚骨・醤油・塩など）、麺の太さ、スープの種類を考慮してください
+    3. 評価（rating）: 4.0以上を優秀、3.5〜4.0を普通、3.5未満は他に代替がなければ避けてください
+
+    ## 除外基準
+    - rating が null かつ同等の評価済み候補がある場合は除外
+    - conditions の価格帯と明確に合わない場合は除外
+
+    ## 出力規則
+    - candidates に含まれる name をそのまま使用してください（変更・省略・翻訳不可）
+    - reason: 他の候補と比べてなぜこの店を推薦するか、味の系統・麺の太さ・スープの特徴を含めて日本語で1〜2文で説明
+  PROMPT
+
   RESPONSE_SCHEMA = {
     type: "json_schema",
     json_schema: {
@@ -48,11 +67,11 @@ class RecommendationService
     }
   }.freeze
 
-  def call(places, query, min_count: 3, max_count: 5, parsed_conditions: nil, feedback: nil)
+  def call(places, query, min_count: 3, max_count: 5, parsed_conditions: nil, feedback: nil, mode: "izakaya")
     return [] if places.empty?
 
     places = prefilter(places, min_count)
-    prompt = build_system_prompt(min_count, max_count, feedback)
+    prompt = build_prompt(min_count, max_count, feedback, mode)
     client = build_client
     response = client.chat(
       parameters: {
@@ -84,6 +103,21 @@ class RecommendationService
   end
 
   private
+
+  def build_prompt(min, max, feedback, mode)
+    if mode == "ramen"
+      base = format(RAMEN_SYSTEM_PROMPT_TEMPLATE, min: min, max: max)
+      return base if feedback.blank?
+
+      safe_feedback = feedback.truncate(500)
+      base + "\n\n## ユーザーフィードバック（必ず最優先で反映してください）\n" \
+            "前回の推薦に対して、ユーザーから以下のフィードバックがありました:\n" \
+            "「#{safe_feedback}」\n\n" \
+            "このフィードバックを他の選定基準より優先して反映してください。"
+    else
+      build_system_prompt(min, max, feedback)
+    end
+  end
 
   def build_system_prompt(min, max, feedback)
     base = format(SYSTEM_PROMPT_TEMPLATE, min: min, max: max)

@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import type { SearchHistoryEntry } from '../types/search';
+import type { SearchHistoryEntry, SearchMode } from '../types/search';
 
-const STORAGE_KEY = 'restaurant_search_history';
+const STORAGE_KEYS: Record<SearchMode, string> = {
+  izakaya: 'restaurant_search_history',
+  ramen: 'ramen_search_history',
+};
 const MAX_HISTORY_SIZE = 10;
 
 interface UseSearchHistoryReturn {
@@ -11,9 +14,9 @@ interface UseSearchHistoryReturn {
   clearHistory: () => void;
 }
 
-function loadFromStorage(): SearchHistoryEntry[] {
+function loadFromStorage(key: string): SearchHistoryEntry[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -26,28 +29,37 @@ function loadFromStorage(): SearchHistoryEntry[] {
   }
 }
 
-function saveToStorage(entries: SearchHistoryEntry[]): void {
+function saveToStorage(entries: SearchHistoryEntry[], key: string): void {
   try {
     if (entries.length === 0) {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(key);
     } else {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      localStorage.setItem(key, JSON.stringify(entries));
     }
   } catch {
     // クォータ超過など — React ステートの更新は継続する
   }
 }
 
-export function useSearchHistory(): UseSearchHistoryReturn {
-  const [history, setHistory] = useState<SearchHistoryEntry[]>(loadFromStorage);
+export function useSearchHistory(mode: SearchMode = 'izakaya'): UseSearchHistoryReturn {
+  const [history, setHistory] = useState<SearchHistoryEntry[]>(() =>
+    loadFromStorage(STORAGE_KEYS[mode]),
+  );
   const isInitialMount = useRef(true);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+
+  // mode 変更時に対応する localStorage から履歴を再読み込みする
+  useEffect(() => {
+    setHistory(loadFromStorage(STORAGE_KEYS[mode]));
+  }, [mode]);
 
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    saveToStorage(history);
+    saveToStorage(history, STORAGE_KEYS[modeRef.current]);
   }, [history]);
 
   const addToHistory = (query: string) => {

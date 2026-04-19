@@ -1,7 +1,9 @@
 import { renderHook, act } from '@testing-library/react';
 import { useSearchHistory } from './useSearchHistory';
 
-const STORAGE_KEY = 'restaurant_search_history';
+const IZAKAYA_STORAGE_KEY = 'restaurant_search_history';
+const RAMEN_STORAGE_KEY = 'ramen_search_history';
+const STORAGE_KEY = IZAKAYA_STORAGE_KEY;
 
 beforeEach(() => {
   localStorage.clear();
@@ -212,6 +214,72 @@ describe('useSearchHistory', () => {
       });
 
       expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+  });
+
+  describe('モード別キー管理', () => {
+    it('izakaya モードは restaurant_search_history キーを使用する', () => {
+      const { result } = renderHook(() => useSearchHistory('izakaya'));
+
+      act(() => {
+        result.current.addToHistory('長岡の居酒屋');
+      });
+
+      expect(localStorage.getItem(IZAKAYA_STORAGE_KEY)).not.toBeNull();
+      expect(localStorage.getItem(RAMEN_STORAGE_KEY)).toBeNull();
+    });
+
+    it('ramen モードは ramen_search_history キーを使用する', () => {
+      const { result } = renderHook(() => useSearchHistory('ramen'));
+
+      act(() => {
+        result.current.addToHistory('こってりラーメン');
+      });
+
+      expect(localStorage.getItem(RAMEN_STORAGE_KEY)).not.toBeNull();
+      expect(localStorage.getItem(IZAKAYA_STORAGE_KEY)).toBeNull();
+    });
+
+    it('既存の restaurant_search_history データを izakaya として読み込む', () => {
+      const existing = [{ query: '新潟の居酒屋' }];
+      localStorage.setItem(IZAKAYA_STORAGE_KEY, JSON.stringify(existing));
+
+      const { result } = renderHook(() => useSearchHistory('izakaya'));
+
+      expect(result.current.history).toEqual(existing);
+    });
+
+    it('izakaya と ramen の履歴は独立している', () => {
+      const izakayaData = [{ query: '居酒屋クエリ' }];
+      const ramenData = [{ query: 'ラーメンクエリ' }];
+      localStorage.setItem(IZAKAYA_STORAGE_KEY, JSON.stringify(izakayaData));
+      localStorage.setItem(RAMEN_STORAGE_KEY, JSON.stringify(ramenData));
+
+      const { result: izakayaResult } = renderHook(() => useSearchHistory('izakaya'));
+      const { result: ramenResult } = renderHook(() => useSearchHistory('ramen'));
+
+      expect(izakayaResult.current.history).toEqual(izakayaData);
+      expect(ramenResult.current.history).toEqual(ramenData);
+    });
+
+    it('mode 切り替え時に対応するキーの履歴に切り替わる', () => {
+      const izakayaData = [{ query: '居酒屋クエリ' }];
+      const ramenData = [{ query: 'ラーメンクエリ' }];
+      localStorage.setItem(IZAKAYA_STORAGE_KEY, JSON.stringify(izakayaData));
+      localStorage.setItem(RAMEN_STORAGE_KEY, JSON.stringify(ramenData));
+
+      const { result, rerender } = renderHook(
+        (mode: 'izakaya' | 'ramen') => useSearchHistory(mode),
+        { initialProps: 'izakaya' as const },
+      );
+
+      expect(result.current.history).toEqual(izakayaData);
+
+      act(() => {
+        rerender('ramen');
+      });
+
+      expect(result.current.history).toEqual(ramenData);
     });
   });
 });

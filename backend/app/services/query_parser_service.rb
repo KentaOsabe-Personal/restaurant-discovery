@@ -20,6 +20,14 @@ class QueryParserService
     空文字列の場合は全フィールドを null としてください。
   PROMPT
 
+  RAMEN_ADDENDUM = <<~PROMPT
+
+    ## 追加指示（ラーメン検索モード）
+    このクエリはラーメン検索です。以下を守ってください:
+    - genre は常に「ラーメン」としてください
+    - ラーメンの特徴（味噌、豚骨、醤油、塩、つけ麺、太麺、細麺など）は keyword フィールドに含めてください
+  PROMPT
+
   RESPONSE_SCHEMA = {
     type: "json_schema",
     json_schema: {
@@ -49,13 +57,15 @@ class QueryParserService
     }
   }.freeze
 
-  def call(query)
+  def call(query, mode: "izakaya")
     client = build_client
+    prompt = SYSTEM_PROMPT
+    prompt += RAMEN_ADDENDUM if mode == "ramen"
     response = client.chat(
       parameters: {
         model: MODEL,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: prompt },
           { role: "user", content: query }
         ],
         response_format: RESPONSE_SCHEMA

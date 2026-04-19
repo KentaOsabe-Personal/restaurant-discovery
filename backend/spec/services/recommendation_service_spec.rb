@@ -403,6 +403,95 @@ RSpec.describe RecommendationService do
         expect { service.call(places, "テスト") }.to raise_error(RecommendationError)
       end
     end
+
+    context "mode パラメータの検証" do
+      let(:places) { [ build_place(name: "ラーメン店A", rating: 4.0) ] }
+
+      context "mode: 'ramen' の場合" do
+        it "ラーメン専用システムプロンプトが使用される" do
+          stub_openai_success([ { name: "ラーメン店A", reason: "こってりスープが特徴" } ])
+
+          service.call(places, "味噌ラーメン", mode: "ramen")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("ラーメン")
+            }
+          ).to have_been_made
+        end
+
+        it "システムプロンプトにラーメン固有の特徴（味の系統・麺の太さ等）の選定基準が含まれる" do
+          stub_openai_success([ { name: "ラーメン店A", reason: "こってりスープが特徴" } ])
+
+          service.call(places, "味噌ラーメン", mode: "ramen")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              content = system_message["content"]
+              content.include?("味の系統") || content.include?("麺の太さ") || content.include?("スープ")
+            }
+          ).to have_been_made
+        end
+
+        it "mode: 'ramen' かつ feedback ありの場合、フィードバック追記がプロンプトに含まれる" do
+          stub_openai_success([ { name: "ラーメン店A", reason: "理由" } ])
+
+          service.call(places, "味噌ラーメン", mode: "ramen", feedback: "太麺が好き")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("太麺が好き")
+            }
+          ).to have_been_made
+        end
+
+        it "レスポンス形状（name + reason）は既存と同一である" do
+          stub_openai_success([ { name: "ラーメン店A", reason: "豚骨スープが濃厚で美味しい" } ])
+
+          result = service.call(places, "ラーメン", mode: "ramen")
+
+          expect(result.first).to include(:name, :reason)
+          expect(result.first[:name]).to eq("ラーメン店A")
+          expect(result.first[:reason]).to eq("豚骨スープが濃厚で美味しい")
+        end
+      end
+
+      context "mode: 'izakaya' の場合（デフォルト）" do
+        it "従来のシステムプロンプト（居酒屋向け）が使用される" do
+          stub_openai_success([ { name: "ラーメン店A", reason: "理由" } ])
+
+          service.call(places, "居酒屋", mode: "izakaya")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("レストラン推薦アシスタント")
+            }
+          ).to have_been_made
+        end
+
+        it "mode を省略した場合も従来のプロンプトが使用される" do
+          stub_openai_success([ { name: "ラーメン店A", reason: "理由" } ])
+
+          service.call(places, "居酒屋")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("レストラン推薦アシスタント")
+            }
+          ).to have_been_made
+        end
+      end
+    end
   end
 
   private
