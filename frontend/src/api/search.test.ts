@@ -39,7 +39,7 @@ describe('searchPlaces', () => {
     expect(result).toEqual(mockSearchResponse);
   });
 
-  it('POST /api/search に正しいヘッダとボディでリクエストを送信する', async () => {
+  it('POST /api/search に正しいヘッダとボディでリクエストを送信する（デフォルト mode=izakaya）', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(mockSearchResponse), {
         status: 200,
@@ -53,7 +53,25 @@ describe('searchPlaces', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '渋谷のランチ' }),
+      body: JSON.stringify({ query: '渋谷のランチ', mode: 'izakaya' }),
+    });
+  });
+
+  it('mode=ramen を指定するとリクエストボディに mode: ramen が含まれる', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockSearchResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await searchPlaces('新潟のラーメン', 'ramen');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '新潟のラーメン', mode: 'ramen' }),
     });
   });
 

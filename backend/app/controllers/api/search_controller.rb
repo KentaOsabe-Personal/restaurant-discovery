@@ -23,7 +23,9 @@ module Api
         return
       end
 
-      parsed_conditions = QueryParserService.new.call(query)
+      mode = params[:mode] || "izakaya"
+      parsed_conditions = QueryParserService.new.call(query, mode: mode)
+      parsed_conditions[:genre] = "ラーメン" if mode == "ramen"
 
       places = GooglePlacesService.new.call(parsed_conditions)
 
@@ -41,7 +43,7 @@ module Api
         return
       end
 
-      recommendations = RecommendationService.new.call(places, query, parsed_conditions: parsed_conditions)
+      recommendations = RecommendationService.new.call(places, query, parsed_conditions: parsed_conditions, mode: mode)
 
       recommended_names = recommendations.map { |r| r[:name] }.to_set
       other_candidates = places.reject { |p| recommended_names.include?(p[:name]) }

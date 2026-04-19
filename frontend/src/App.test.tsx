@@ -436,6 +436,189 @@ describe('App - refine-recommendation統合', () => {
   });
 });
 
+describe('App - ramen-search-mode 結合テスト', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  const ramenRecommendation = {
+    name: 'テストラーメン店',
+    rating: 4.2,
+    price_level: null,
+    address: '新潟市中央区1-1-1',
+    google_maps_url: 'https://maps.google.com/ramen',
+    reason: 'こってりで美味しい',
+    lat: 37.9,
+    lng: 139.0,
+  };
+
+  it('タブ切り替え: 居酒屋→ラーメンで検索結果リセットとおまかせボタン消失（Req 1.2, 1.4, 1.5）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [ramenRecommendation],
+      other_candidates: [],
+      parsed_conditions: { area: '長岡', genre: '居酒屋', price_level: null, keyword: null },
+    });
+
+    render(<App />);
+
+    // 居酒屋タブでのおまかせボタン表示を確認
+    expect(screen.getByRole('button', { name: '新潟駅前でおすすめ' })).toBeInTheDocument();
+
+    // 居酒屋タブで検索して結果表示
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '長岡の居酒屋' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('テストラーメン店');
+
+    // ラーメンタブに切り替え
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+
+    // 検索結果がリセットされる
+    expect(screen.queryByText('テストラーメン店')).toBeNull();
+    // おまかせボタンが非表示になる
+    expect(screen.queryByRole('button', { name: '新潟駅前でおすすめ' })).toBeNull();
+  });
+
+  it('ラーメン検索: 検索条件タグに「ラーメン」が表示される（Req 2.1, 2.4）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [],
+      other_candidates: [],
+      parsed_conditions: { area: '駅前', genre: 'ラーメン', price_level: null, keyword: '味噌' },
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '駅前で味噌ラーメン' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByText('ジャンル: ラーメン');
+    expect(screen.getByText('エリア: 駅前')).toBeInTheDocument();
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('駅前で味噌ラーメン', 'ramen');
+  });
+
+  it('ラーメンフィードバック: refinePlaces が mode=ramen で呼ばれる（Req 4.1）', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [ramenRecommendation],
+      other_candidates: [],
+      parsed_conditions: { area: '駅前', genre: 'ラーメン', price_level: null, keyword: null },
+    });
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [{ ...ramenRecommendation, name: '再推薦ラーメン店' }],
+      other_candidates: [],
+      parsed_conditions: { area: '駅前', genre: 'ラーメン', price_level: null, keyword: '細麺' },
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '駅前でラーメン' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('テストラーメン店');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: '細麺が食べたい' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+
+    await screen.findByText('再推薦ラーメン店');
+    expect(vi.mocked(refinePlaces)).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'ramen' }),
+    );
+  });
+
+  it('検索履歴分離: ラーメン履歴は居酒屋タブに切り替えても表示されない（Req 5.1, 5.2）', async () => {
+    localStorage.setItem(
+      'restaurant_search_history',
+      JSON.stringify([{ query: '居酒屋クエリ' }]),
+    );
+
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [],
+      other_candidates: [],
+      parsed_conditions: { area: null, genre: 'ラーメン', price_level: null, keyword: null },
+    });
+
+    render(<App />);
+
+    // ラーメンタブに切り替えて検索
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: 'ラーメンクエリ' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText(/見つかりません/);
+
+    // 居酒屋タブに戻る
+    fireEvent.click(screen.getByRole('tab', { name: '居酒屋・バー' }));
+
+    // 居酒屋タブの既存履歴が表示される（useEffect による再読み込みを待つ）
+    await screen.findByText('居酒屋クエリ');
+    // ラーメンタブで検索したクエリは表示されない
+    expect(screen.queryByText('ラーメンクエリ')).toBeNull();
+  });
+
+  it('後方互換: 居酒屋タブでの検索・フィードバックが mode=izakaya で動作する（Req 6.1, 6.3）', async () => {
+    const izakayaRecommendation = {
+      name: '居酒屋テスト',
+      rating: 4.3,
+      price_level: null,
+      address: '新潟市中央区2-2-2',
+      google_maps_url: 'https://maps.google.com/izakaya',
+      reason: '雰囲気が良い',
+      lat: 37.9,
+      lng: 139.0,
+    };
+
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [izakayaRecommendation],
+      other_candidates: [],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [{ ...izakayaRecommendation, name: '再推薦居酒屋' }],
+      other_candidates: [],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+
+    render(<App />);
+
+    // おまかせボタンが表示されることを確認
+    expect(screen.getByRole('button', { name: '新潟駅前でおすすめ' })).toBeInTheDocument();
+
+    // 居酒屋タブで検索
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '長岡の居酒屋' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('居酒屋テスト');
+
+    // mode=izakaya で searchPlaces が呼ばれることを確認
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('長岡の居酒屋', 'izakaya');
+
+    // フィードバックを送信
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: '個室があると良い' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+    await screen.findByText('再推薦居酒屋');
+
+    // mode=izakaya で refinePlaces が呼ばれることを確認
+    expect(vi.mocked(refinePlaces)).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'izakaya' }),
+    );
+  });
+});
+
 describe('App - 選択状態管理', () => {
   afterEach(() => {
     vi.resetAllMocks();

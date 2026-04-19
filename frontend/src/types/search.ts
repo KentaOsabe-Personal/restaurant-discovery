@@ -1,5 +1,8 @@
+export type SearchMode = 'izakaya' | 'ramen';
+
 export type SearchRequest = {
   query: string;
+  mode?: SearchMode;
 };
 
 export type SearchHistoryEntry = {
@@ -51,6 +54,7 @@ export type RefineRequest = {
   feedback: string;
   original_query: string;
   parsed_conditions: ParsedConditions | null;
+  mode?: SearchMode;
 };
 
 export type RefineResponse = SearchResponse;

@@ -122,6 +122,72 @@ RSpec.describe "POST /api/refine", type: :request do
     end
   end
 
+  describe "ラーメンモード（mode=ramen）" do
+    let(:ramen_original_conditions) { { area: "新潟", genre: "居酒屋", price_level: nil, keyword: nil } }
+    let(:ramen_params) do
+      {
+        feedback: "こってり系が良い",
+        original_query: "新潟のラーメン",
+        parsed_conditions: { area: "新潟", genre: "居酒屋", price_level: nil, keyword: nil },
+        mode: "ramen"
+      }.to_json
+    end
+
+    before do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(
+        { area: nil, genre: nil, price_level: nil, keyword: "こってり" }
+      )
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(recommendations)
+    end
+
+    it "マージ後の parsed_conditions.genre が「ラーメン」になる" do
+      post "/api/refine", params: ramen_params, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["genre"]).to eq("ラーメン")
+    end
+
+    it "QueryParserService に mode: ramen が渡される" do
+      expect_any_instance_of(QueryParserService).to receive(:call)
+        .with("こってり系が良い", mode: "ramen")
+        .and_return({ area: nil, genre: nil, price_level: nil, keyword: "こってり" })
+      post "/api/refine", params: ramen_params, headers: valid_headers
+    end
+
+    it "RecommendationService に mode: ramen が渡される" do
+      expect_any_instance_of(RecommendationService).to receive(:call)
+        .with(anything, anything, hash_including(mode: "ramen"))
+        .and_return(recommendations)
+      post "/api/refine", params: ramen_params, headers: valid_headers
+    end
+
+    it "200 OK を返す" do
+      post "/api/refine", params: ramen_params, headers: valid_headers
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+  describe "mode 未指定時（後方互換性）" do
+    before do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(
+        { area: nil, genre: nil, price_level: nil, keyword: "個室" }
+      )
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(recommendations)
+    end
+
+    it "mode 未指定時は QueryParserService に mode: izakaya が渡される" do
+      expect_any_instance_of(QueryParserService).to receive(:call)
+        .with("個室があると良い", mode: "izakaya")
+        .and_return({ area: nil, genre: nil, price_level: nil, keyword: "個室" })
+      post "/api/refine", params: valid_params, headers: valid_headers
+    end
+
+    it "mode 未指定時は genre がラーメンで上書きされない" do
+      post "/api/refine", params: valid_params, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["genre"]).to eq("居酒屋")
+    end
+  end
+
   describe "バリデーション（異常系）" do
     it "feedback が空文字のとき 422 を返す" do
       params = { feedback: "", original_query: "古町の居酒屋", parsed_conditions: {} }.to_json

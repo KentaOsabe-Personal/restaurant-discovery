@@ -223,6 +223,73 @@ RSpec.describe "POST /api/search", type: :request do
     end
   end
 
+  describe "ラーメンモード（mode=ramen）" do
+    let(:ramen_parsed) { { area: "新潟", genre: nil, price_level: nil, keyword: "太麺" } }
+    let(:ramen_recommendations) do
+      [
+        {
+          name: "ラーメン屋A",
+          rating: 4.5,
+          price_level: nil,
+          address: "新潟市中央区",
+          google_maps_url: "https://maps.google.com/?cid=10",
+          lat: 37.916,
+          lng: 139.036,
+          reason: "濃厚豚骨スープと太麺が特徴"
+        }
+      ]
+    end
+
+    before do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(ramen_parsed)
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(ramen_recommendations)
+    end
+
+    it "parsed_conditions.genre が「ラーメン」になる" do
+      post "/api/search", params: { query: "太麺ラーメン", mode: "ramen" }.to_json, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["genre"]).to eq("ラーメン")
+    end
+
+    it "QueryParserService に mode: ramen が渡される" do
+      expect_any_instance_of(QueryParserService).to receive(:call)
+        .with("太麺ラーメン", mode: "ramen").and_return(ramen_parsed)
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return([])
+      post "/api/search", params: { query: "太麺ラーメン", mode: "ramen" }.to_json, headers: valid_headers
+    end
+
+    it "RecommendationService に mode: ramen が渡される" do
+      expect_any_instance_of(RecommendationService).to receive(:call)
+        .with(anything, anything, hash_including(mode: "ramen"))
+        .and_return(ramen_recommendations)
+      post "/api/search", params: { query: "太麺ラーメン", mode: "ramen" }.to_json, headers: valid_headers
+    end
+
+    it "200 OK を返す" do
+      post "/api/search", params: { query: "太麺ラーメン", mode: "ramen" }.to_json, headers: valid_headers
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
+  describe "mode 未指定時（後方互換性）" do
+    before do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(parsed_conditions)
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(recommendations)
+    end
+
+    it "mode 未指定時は QueryParserService に mode: izakaya が渡される" do
+      expect_any_instance_of(QueryParserService).to receive(:call)
+        .with("渋谷でイタリアン", mode: "izakaya").and_return(parsed_conditions)
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+    end
+
+    it "mode 未指定時は genre がラーメンで上書きされない" do
+      post "/api/search", params: { query: "渋谷でイタリアン" }.to_json, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["genre"]).to eq("イタリアン")
+    end
+  end
+
   describe "バリデーション（異常系）" do
     it "query が空文字のとき 422 を返す" do
       post "/api/search", params: { query: "" }.to_json, headers: valid_headers

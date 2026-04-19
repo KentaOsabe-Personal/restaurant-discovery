@@ -201,6 +201,68 @@ RSpec.describe QueryParserService do
         expect { service.call("テスト") }.to raise_error(QueryParserError)
       end
     end
+
+    context "mode パラメータの検証" do
+      context "mode: 'ramen' の場合" do
+        it "システムプロンプトにラーメン追記が含まれる" do
+          stub_openai_success(area: nil, genre: "ラーメン", price_level: nil, keyword: nil)
+
+          service.call("味噌ラーメン", mode: "ramen")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("ラーメン検索")
+            }
+          ).to have_been_made
+        end
+
+        it "システムプロンプトに genre を常に「ラーメン」とする指示が含まれる" do
+          stub_openai_success(area: nil, genre: "ラーメン", price_level: nil, keyword: nil)
+
+          service.call("味噌ラーメン", mode: "ramen")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              system_message["content"].include?("genre") && system_message["content"].include?("ラーメン")
+            }
+          ).to have_been_made
+        end
+      end
+
+      context "mode: 'izakaya' の場合（デフォルト）" do
+        it "システムプロンプトにラーメン追記が含まれない" do
+          stub_openai_success(area: "渋谷", genre: "居酒屋", price_level: nil, keyword: nil)
+
+          service.call("渋谷の居酒屋", mode: "izakaya")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              !system_message["content"].include?("ラーメン検索")
+            }
+          ).to have_been_made
+        end
+
+        it "mode を省略した場合もラーメン追記が含まれない" do
+          stub_openai_success(area: nil, genre: nil, price_level: nil, keyword: nil)
+
+          service.call("テスト")
+
+          expect(
+            a_request(:post, openai_endpoint).with { |req|
+              body = JSON.parse(req.body)
+              system_message = body["messages"].find { |m| m["role"] == "system" }
+              !system_message["content"].include?("ラーメン検索")
+            }
+          ).to have_been_made
+        end
+      end
+    end
   end
 
   private
