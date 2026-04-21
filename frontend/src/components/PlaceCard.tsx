@@ -19,7 +19,7 @@ function buildTabelogSearchUrl(name: string): string | null {
   return `https://tabelog.com/niigata/rstLst/?vs=1&sw=${encodeURIComponent(name.trim())}`;
 }
 
-function PlaceCard({ name, rating, price_level, address, google_maps_url, reason, isSelected, onSelect }: PlaceCardProps) {
+function PlaceCard({ name, rating, price_level, address, google_maps_url, distance_km, reason, isSelected, onSelect }: PlaceCardProps) {
   const formattedPriceLevel = formatPriceLevel(price_level);
   const safeMapsUrl = google_maps_url.startsWith('https://') ? google_maps_url : '#';
   const tabelogUrl = buildTabelogSearchUrl(name);
@@ -35,6 +35,7 @@ function PlaceCard({ name, rating, price_level, address, google_maps_url, reason
       <div className="flex items-center gap-2 mt-2">
         {rating !== null && <span className="inline-block bg-yellow-100 text-yellow-800 text-sm px-2 py-0.5 rounded">{rating}</span>}
         {formattedPriceLevel !== null && <span className="inline-block bg-green-100 text-green-800 text-sm px-2 py-0.5 rounded">{formattedPriceLevel}</span>}
+        {distance_km != null && <span className="inline-block bg-blue-100 text-blue-800 text-sm px-2 py-0.5 rounded">{distance_km.toFixed(1)} km</span>}
       </div>
       <div className="flex flex-wrap gap-3 mt-2">
         <a href={safeMapsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm" onClick={(e) => e.stopPropagation()}>

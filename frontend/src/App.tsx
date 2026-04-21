@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { Recommendation, OtherCandidate, ParsedConditions, SearchMode } from './types/search';
+import type { Recommendation, OtherCandidate, ParsedConditions, SearchMode, TravelTime } from './types/search';
 import { searchPlaces } from './api/search';
 import { refinePlaces } from './api/refine';
 import SearchInput from './components/SearchInput';
@@ -11,6 +11,7 @@ import SearchConditionTags from './components/SearchConditionTags';
 import FeedbackInput from './components/FeedbackInput';
 import MapPanel from './components/MapPanel';
 import ModeTabs from './components/ModeTabs';
+import DistanceFilterButtons from './components/DistanceFilterButtons';
 import { omakaseAreas } from './config/omakaseAreas';
 import type { OmakaseAreaId } from './config/omakaseAreas';
 import { fetchOmakase } from './api/omakase';
@@ -28,6 +29,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedGoogleMapsUrl, setSelectedGoogleMapsUrl] = useState<string | null>(null);
   const [infoWindowVisible, setInfoWindowVisible] = useState<boolean>(false);
+  const [distanceFilter, setDistanceFilter] = useState<TravelTime | null>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory(activeTab);
 
   function handleTabChange(mode: SearchMode): void {
@@ -40,6 +42,7 @@ function App() {
     setShowOtherCandidates(false);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
+    setDistanceFilter(null);
   }
 
   const effectiveOtherExpanded =
@@ -76,7 +79,8 @@ function App() {
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
     try {
-      const response = await searchPlaces(query, activeTab);
+      const travelTime = activeTab === 'ramen' && distanceFilter !== null ? distanceFilter : undefined;
+      const response = await searchPlaces(query, activeTab, travelTime);
       setRecommendations(response.recommendations);
       setOtherCandidates(response.other_candidates);
       setParsedConditions(response.parsed_conditions);
@@ -147,6 +151,7 @@ function App() {
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
         {activeTab === 'izakaya' && <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />}
+        {activeTab === 'ramen' && <DistanceFilterButtons value={distanceFilter} onChange={setDistanceFilter} />}
         {!isLoading && parsedConditions !== null && <SearchConditionTags parsedConditions={parsedConditions} />}
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
         {error !== null && !isLoading && <p className="text-red-600">{error}</p>}

@@ -1,5 +1,11 @@
 module Api
   class SearchController < BaseController
+    TRAVEL_TIME_RANGES = {
+      "within_30min" => { min_km: 0, max_km: 30 },
+      "within_1hour" => { min_km: 0, max_km: 60 },
+      "1_to_2_hours" => { min_km: 60, max_km: 120 }
+    }.freeze
+
     rescue_from StandardError do |exception|
       Rails.logger.error "#{exception.class}: #{exception.message}"
       render json: { error: "内部エラーが発生しました" }, status: :internal_server_error
@@ -23,11 +29,37 @@ module Api
         return
       end
 
+      travel_time = params[:travel_time]
+      if travel_time.present? && !TRAVEL_TIME_RANGES.key?(travel_time)
+        render json: { error: "travel_time は within_30min, within_1hour, 1_to_2_hours のいずれかを指定してください" }, status: :unprocessable_content
+        return
+      end
+
       mode = params[:mode] || "izakaya"
       parsed_conditions = QueryParserService.new.call(query, mode: mode)
       parsed_conditions[:genre] = "ラーメン" if mode == "ramen"
 
       places = GooglePlacesService.new.call(parsed_conditions)
+
+      if mode == "ramen"
+        distance_calc = DistanceCalculatorService.new
+        places = places.map do |place|
+          if place[:lat] && place[:lng]
+            distance_km = distance_calc.call(HOME_LOCATION[:lat], HOME_LOCATION[:lng], place[:lat], place[:lng])
+            place.merge(distance_km: distance_km)
+          else
+            Rails.logger.warn "[DistanceCalculator] #{place[:name]} has nil lat/lng, setting distance_km to nil"
+            place.merge(distance_km: nil)
+          end
+        end
+
+        if travel_time.present?
+          range = TRAVEL_TIME_RANGES[travel_time]
+          places = places.select do |place|
+            place[:distance_km] && range[:min_km] <= place[:distance_km] && place[:distance_km] <= range[:max_km]
+          end
+        end
+      end
 
       if places.empty?
         render json: {
