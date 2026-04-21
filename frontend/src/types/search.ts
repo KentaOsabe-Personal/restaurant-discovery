@@ -75,6 +75,7 @@ export type RefineRequest = {
   original_query: string;
   parsed_conditions: ParsedConditions | null;
   mode?: SearchMode;
+  origin?: 'ramen_omakase';
 };
 
 export type RefineResponse = SearchResponse;

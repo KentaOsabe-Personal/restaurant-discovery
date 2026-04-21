@@ -145,15 +145,15 @@ describe('fetchOmakase', () => {
   });
 
   describe('エラーハンドリング', () => {
-    it('422 のとき例外を throw する', async () => {
+    it('422 のとき JSON error message を優先して例外を throw する', async () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValue(
-          new Response(JSON.stringify({ error: 'area must be a non-empty string' }), { status: 422 }),
+          new Response(JSON.stringify({ error: '条件に合うラーメン激戦区がありません' }), { status: 422 }),
         ),
       );
 
-      await expect(fetchOmakase({ area: 'ekimae' })).rejects.toThrow('HTTP error: 422');
+      await expect(fetchOmakase({ mode: 'ramen' })).rejects.toThrow('条件に合うラーメン激戦区がありません');
     });
 
     it('502 のとき例外を throw する', async () => {
