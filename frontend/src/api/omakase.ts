@@ -1,11 +1,10 @@
-import type { OmakaseResponse } from '../types/search';
-import type { OmakaseAreaId } from '../config/omakaseAreas';
+import type { OmakaseRequest, OmakaseResponse } from '../types/search';
 
-export async function fetchOmakase(areaId: OmakaseAreaId): Promise<OmakaseResponse> {
+export async function fetchOmakase(request: OmakaseRequest): Promise<OmakaseResponse> {
   const response = await fetch('/api/omakase', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ area: areaId }),
+    body: JSON.stringify(request),
   });
 
   if (!response.ok) {

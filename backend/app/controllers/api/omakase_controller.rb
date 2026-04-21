@@ -16,6 +16,71 @@ module Api
     end
 
     def create
+      if params[:mode] == "ramen"
+        create_ramen
+      else
+        create_izakaya
+      end
+    end
+
+    private
+
+    def create_ramen
+      travel_time = params[:travel_time].presence
+
+      if travel_time && !RamenOmakaseService::TRAVEL_TIME_RANGES.key?(travel_time)
+        render json: { error: "travel_time は within_30min, within_1hour, 1_to_2_hours のいずれかを指定してください" }, status: :unprocessable_content
+        return
+      end
+
+      conditions = RamenOmakaseService.new.call(travel_time: travel_time)
+      Rails.logger.info "OmakaseController ramen: mode=ramen, area_id=#{conditions[:area_id]}, sub_area=#{conditions[:sub_area]}, travel_time=#{travel_time}"
+
+      places = GooglePlacesService.new.call(conditions)
+
+      if places.empty?
+        Rails.logger.warn "OmakaseController ramen: places 0 (area_id=#{conditions[:area_id]})"
+        render json: build_ramen_response([], [], conditions), status: :ok
+        return
+      end
+
+      filtered = filter_by_area(places, conditions[:area_names])
+      if filtered.empty?
+        Rails.logger.warn "OmakaseController ramen: places 0 after address filter (area_id=#{conditions[:area_id]})"
+        render json: build_ramen_response([], [], conditions), status: :ok
+        return
+      end
+
+      distance_calc = DistanceCalculatorService.new
+      filtered_with_distance = filtered.map do |place|
+        if place[:lat] && place[:lng]
+          distance_km = distance_calc.call(HOME_LOCATION[:lat], HOME_LOCATION[:lng], place[:lat], place[:lng])
+          place.merge(distance_km: distance_km)
+        else
+          place.merge(distance_km: nil)
+        end
+      end
+
+      parsed_conditions = { area: conditions[:sub_area], genre: "ラーメン", price_level: nil, keyword: nil }
+      query = "#{conditions[:sub_area]}のラーメンおまかせ"
+
+      recommendations = RecommendationService.new.call(
+        filtered_with_distance,
+        query,
+        parsed_conditions: parsed_conditions,
+        mode: "ramen"
+      )
+
+      recommended_names = recommendations.map { |r| r[:name] }.to_set
+      other_candidates = filtered_with_distance.reject { |p| recommended_names.include?(p[:name]) }
+
+      render json: build_ramen_response(recommendations, other_candidates, conditions), status: :ok
+    rescue RamenOmakaseService::NoEligibleArea => e
+      Rails.logger.warn "OmakaseController ramen: eligible area 0 (travel_time=#{params[:travel_time]})"
+      render json: { error: e.message }, status: :unprocessable_content
+    end
+
+    def create_izakaya
       area = params[:area]
 
       unless area.is_a?(String) && area.present?
@@ -46,12 +111,29 @@ module Api
       render json: build_response(recommendations, conditions), status: :ok
     end
 
-    private
-
     def filter_by_area(places, area_names)
       places.select do |place|
         area_names.any? { |name| place[:address].to_s.include?(name) }
       end
+    end
+
+    def build_ramen_response(recommendations, other_candidates, conditions)
+      {
+        recommendations: recommendations,
+        other_candidates: other_candidates,
+        parsed_conditions: {
+          area: conditions[:sub_area],
+          genre: "ラーメン",
+          price_level: nil,
+          keyword: nil
+        },
+        omakase: {
+          mode: "ramen",
+          area_id: conditions[:area_id],
+          sub_area: conditions[:sub_area],
+          travel_time: conditions[:travel_time]
+        }
+      }
     end
 
     def build_response(recommendations, conditions)

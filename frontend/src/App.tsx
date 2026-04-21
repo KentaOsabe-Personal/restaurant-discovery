@@ -102,7 +102,7 @@ function App() {
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
     try {
-      const response = await fetchOmakase(areaId);
+      const response = await fetchOmakase({ area: areaId });
       setRecommendations(response.recommendations);
       setOtherCandidates(response.other_candidates);
       setParsedConditions(response.parsed_conditions);
@@ -148,7 +148,7 @@ function App() {
       <div className={hasResults ? 'w-1/2 overflow-y-auto p-4' : 'max-w-3xl mx-auto px-4 py-8'}>
         <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
         <ModeTabs activeTab={activeTab} onTabChange={handleTabChange} />
-        <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
+        <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} placeholder="古町の海鮮居酒屋など" />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
         {activeTab === 'izakaya' && <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />}
         {activeTab === 'ramen' && <DistanceFilterButtons value={distanceFilter} onChange={setDistanceFilter} />}

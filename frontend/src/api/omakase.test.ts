@@ -10,6 +10,8 @@ const mockOmakaseResponse: OmakaseResponse = {
       address: '新潟市中央区万代1-1-1',
       google_maps_url: 'https://maps.google.com/?cid=123',
       reason: '万代エリアで評価が高い居酒屋です',
+      lat: null,
+      lng: null,
     },
   ],
   other_candidates: [],
@@ -30,87 +32,140 @@ afterEach(() => {
 });
 
 describe('fetchOmakase', () => {
-  it('200 OK のとき OmakaseResponse を resolve する', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
+  describe('izakaya モード（area 指定）', () => {
+    it('200 OK のとき OmakaseResponse を resolve する', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify(mockOmakaseResponse), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
+
+      const result = await fetchOmakase({ area: 'ekimae' });
+      expect(result).toEqual(mockOmakaseResponse);
+    });
+
+    it('POST /api/omakase に area を含む body でリクエストを送信する', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
         new Response(JSON.stringify(mockOmakaseResponse), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
-      ),
-    );
+      );
+      vi.stubGlobal('fetch', fetchMock);
 
-    const result = await fetchOmakase('ekimae');
-    expect(result).toEqual(mockOmakaseResponse);
-  });
+      await fetchOmakase({ area: 'ekimae' });
 
-  it('POST /api/omakase に正しいエンドポイント・ヘッダー・ボディでリクエストを送信する', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(mockOmakaseResponse), {
-        status: 200,
+      expect(fetchMock).toHaveBeenCalledWith('/api/omakase', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+        body: JSON.stringify({ area: 'ekimae' }),
+      });
+    });
 
-    await fetchOmakase('ekimae');
+    it('別エリア (ekinan) でリクエストボディに area: "ekinan" を送信する', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({ ...mockOmakaseResponse, omakase: { area_id: 'ekinan', sub_area: 'けやき通り' } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      );
+      vi.stubGlobal('fetch', fetchMock);
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/omakase', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ area: 'ekimae' }),
+      await fetchOmakase({ area: 'ekinan' });
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/omakase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ area: 'ekinan' }),
+      });
     });
   });
 
-  it('別エリア (ekinan) でリクエストボディに area: "ekinan" を送信する', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ...mockOmakaseResponse, omakase: { area_id: 'ekinan', sub_area: 'けやき通り' } }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
+  describe('ramen モード', () => {
+    const ramenResponse: OmakaseResponse = {
+      ...mockOmakaseResponse,
+      parsed_conditions: { area: '新潟東区', genre: 'ラーメン', price_level: null, keyword: null },
+      omakase: { area_id: 'niigata_higashi', sub_area: '新潟東区', mode: 'ramen', travel_time: 'within_30min' },
+    };
 
-    await fetchOmakase('ekinan');
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/omakase', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ area: 'ekinan' }),
-    });
-  });
-
-  it('422 のとき例外を throw する', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ error: 'area must be a non-empty string' }), {
-          status: 422,
+    it('travel_time 指定で mode: ramen と travel_time を body に送信する', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(ramenResponse), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
         }),
-      ),
-    );
+      );
+      vi.stubGlobal('fetch', fetchMock);
 
-    await expect(fetchOmakase('ekimae')).rejects.toThrow('HTTP error: 422');
+      await fetchOmakase({ mode: 'ramen', travel_time: 'within_30min' });
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/omakase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'ramen', travel_time: 'within_30min' }),
+      });
+    });
+
+    it('travel_time 未指定で mode: ramen のみを body に送信する', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(ramenResponse), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      await fetchOmakase({ mode: 'ramen' });
+
+      expect(fetchMock).toHaveBeenCalledWith('/api/omakase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'ramen' }),
+      });
+    });
+
+    it('200 OK のとき OmakaseResponse を resolve する', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify(ramenResponse), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      );
+
+      const result = await fetchOmakase({ mode: 'ramen', travel_time: 'within_1hour' });
+      expect(result).toEqual(ramenResponse);
+    });
   });
 
-  it('502 のとき例外を throw する', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(null, { status: 502 }),
-      ),
-    );
+  describe('エラーハンドリング', () => {
+    it('422 のとき例外を throw する', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ error: 'area must be a non-empty string' }), { status: 422 }),
+        ),
+      );
 
-    await expect(fetchOmakase('ekimae')).rejects.toThrow('HTTP error: 502');
-  });
+      await expect(fetchOmakase({ area: 'ekimae' })).rejects.toThrow('HTTP error: 422');
+    });
 
-  it('ネットワークエラーのとき例外を throw する', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
-    );
+    it('502 のとき例外を throw する', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 502 })));
 
-    await expect(fetchOmakase('ekimae')).rejects.toThrow('Failed to fetch');
+      await expect(fetchOmakase({ mode: 'ramen' })).rejects.toThrow('HTTP error: 502');
+    });
+
+    it('ネットワークエラーのとき例外を throw する', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+      await expect(fetchOmakase({ area: 'ekimae' })).rejects.toThrow('Failed to fetch');
+    });
   });
 });

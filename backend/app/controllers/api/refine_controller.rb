@@ -24,12 +24,14 @@ module Api
       end
 
       mode = params[:mode] || "izakaya"
+      origin = params[:origin]
       original_query = params[:original_query].to_s
       original_conditions = parse_conditions(params[:parsed_conditions])
 
       delta_conditions = QueryParserService.new.call(feedback, mode: mode)
       merged_conditions = merge_conditions(original_conditions, delta_conditions)
       merged_conditions[:genre] = "ラーメン" if mode == "ramen"
+      merged_conditions[:area] = original_conditions[:area] if origin == "ramen_omakase"
 
       places = GooglePlacesService.new.call(merged_conditions)
 

@@ -1,0 +1,82 @@
+# 実装タスク
+
+- [x] 1. 基盤: ラーメンおまかせの入力契約と候補エリア選定の土台を整える
+- [x] 1.1 ラーメン激戦区カタログと距離条件に基づく選定ロジックを用意する
+  - 新潟周辺のラーメン激戦区を backend の静的カタログとして保持し、各エリアに query 用名称・住所フィルタ語・中心座標を持たせる
+  - `travel_time` が指定された場合は HOME_LOCATION からの距離で eligible area を絞り込み、未指定時は全エリアを候補に含める
+  - eligible area が 1 件以上あるときは 1 エリアを決定的に選べる呼び出し形を持ち、`genre=ラーメン` と選定エリア情報を含む検索条件を返す
+  - eligible area が 0 件のときは別条件へフォールバックせず domain error を返す
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1_
+- [x] 1.2 mode 別おまかせリクエストを型安全に送れるようにする
+  - 居酒屋 path は既存の area 必須契約を維持し、ラーメン path は `mode: "ramen"` と optional `travel_time` のみを送る
+  - frontend から未定義 shape を送れない discriminated union を整え、失敗時は既存どおり HTTP status に応じた error を返す
+  - 完了時は同じ `/api/omakase` に対して居酒屋 request とラーメン request の body 差分を安全に使い分けられる
+  - _Requirements: 1.3, 2.2, 2.3, 5.1_
+- [x] 1.3 検索入力を mode 別プレースホルダーに対応させる
+  - 検索入力は placeholder を props から受け取り、内部固定文言を持たない
+  - loading や aria-label の既存挙動は変えず、表示文言だけを差し替えられるようにする
+  - 完了時は同じ検索入力 UI を居酒屋/ラーメン双方で再利用しながら文言だけを切り替えられる
+  - _Requirements: 4.5, 5.3_
+
+- [x] 2. バックエンドの mode-aware おまかせ応答を完成させる
+- [x] 2.1 ラーメン mode を受ける `/api/omakase` 入力分岐とエラー応答を追加する
+  - 居酒屋 path の `area` 必須契約はそのまま維持し、ラーメン path では `travel_time` の妥当性を検証して `RamenOmakaseService` を呼び出す
+  - 候補エリアゼロは 422 の明示エラーメッセージとして返し、外部 API 失敗は既存どおり 502、想定外は 500 を返す
+  - mode、area_id、sub_area、travel_time と empty path の種別をログへ残し、eligible area 0 と places 0 を区別できるようにする
+  - 完了時は既存居酒屋 request を壊さずにラーメン request を同じ endpoint で受け付けられる
+  - _Requirements: 1.3, 2.4, 5.1_
+- [x] 2.2 ラーメンおまかせ結果を既存 SearchResponse 契約で返す
+  - selected area に紐づく候補だけを取得し、address filter 後の候補へ `distance_km` を付与して recommendation と `other_candidates` の双方に同じ契約を適用する
+  - `RecommendationService` にはラーメン mode と selected area を反映した条件を渡し、味や特徴に触れた理由付きのおすすめを返す
+  - selected area を `parsed_conditions.area` と `omakase` meta に反映し、候補店舗ゼロ時も別条件へ逃がさず空の `SearchResponse` を返す
+  - 完了時はラーメンおまかせ結果が既存の距離表示・追加候補表示・検索条件タグ表示でそのまま扱える
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.2, 4.3_
+- [x] 2.3 (P) ラーメンおまかせ起点の再レコメンドだけ selected area を固定する
+  - `origin == "ramen_omakase"` のときだけ `parsed_conditions.area` を immutable として扱い、追加要望は area 以外の条件へ反映する
+  - 通常ラーメン refine では area-lock を適用せず、既存の refine 契約を維持する
+  - 完了時はラーメンおまかせ起点の refine だけが selected area 内で再検索され、それ以外の refine は従来どおり動作する
+  - _Requirements: 4.4_
+  - _Boundary: Api::RefineController_
+
+- [ ] 3. ラーメンタブの起動導線と画面状態を既存体験へ統合する
+- [ ] 3.1 (P) ラーメンタブ専用のおまかせボタンを追加する
+  - ラーメンタブで距離フィルターと並べて使える単一ボタンを表示する
+  - `isLoading` 中は disabled にして重複実行を防ぎ、クリック通知以外の state は持たない
+  - 完了時はラーメンタブで自由入力なしでもラーメンおまかせを開始でき、処理中は同じボタンから再実行できない
+  - _Requirements: 1.1, 1.4_
+  - _Boundary: RamenOmakaseButton_
+- [ ] 3.2 ラーメンおまかせ開始時の App 状態遷移と結果反映を組み込む
+  - ラーメンタブでは距離フィルターとおまかせボタンを同時に表示し、おまかせ開始時は query 未入力でも処理を開始できるようにする
+  - 開始時に旧結果・選択状態・エラー表示を既存 reset 動作で整理し、成功時は `parsed_conditions`、おすすめ一覧、追加候補、地図表示を既存結果 UI に流し込む
+  - 候補エリアゼロの 422 と候補店舗ゼロの空結果を既存 UI のエラー/空状態として区別して見せる
+  - 完了時はラーメンおまかせ結果でも selected area とラーメン条件がタグ表示され、地図・追加候補を継続利用できる
+  - _Depends: 2.1, 2.2_
+  - _Requirements: 1.2, 1.3, 2.4, 3.3, 4.1, 4.2_
+- [ ] 3.3 ラーメンおまかせ起点の再レコメンド状態を App で保持する
+  - ラーメンおまかせ成功時だけ `origin: "ramen_omakase"` を保持し、再レコメンド時は `mode: "ramen"` と選定済み条件を送る
+  - 通常ラーメン検索やタブ切替では `origin` を解除し、通常検索フローへ持ち込まない
+  - 完了時はラーメンおまかせ後の追加要望が同じ selected area を保ったまま再レコメンドされ、通常検索フローには影響しない
+  - _Depends: 2.3_
+  - _Requirements: 4.4, 5.3_
+- [ ] 3.4 ラーメンタブ固有の入力文言を既存検索 UI に注入する
+  - `activeTab` に応じて検索欄の例示文言を切り替え、居酒屋タブでは既存文言を維持する
+  - mode 別文言の切替以外で検索入力の挙動は変えず、通常ラーメン検索と距離フィルター操作を妨げない
+  - 完了時はラーメンタブだけがラーメン向け文言を表示し、他タブの検索体験は変わらない
+  - _Depends: 1.3_
+  - _Requirements: 4.5, 5.3_
+
+- [ ] 4. 検証と非回帰を固定する
+- [ ] 4.1 (P) ラーメンおまかせのフロントエンド挙動をテストで固定する
+  - `RamenOmakaseButton` の表示、loading 中 disabled、click 通知をコンポーネントテストで確認する
+  - プレースホルダー切替、ラーメンおまかせ開始、selected area タグ表示、地図・追加候補の継続利用、`origin` 付き refine 送信、居酒屋 4 エリア表示維持を UI テストで確認する
+  - 完了時はラーメンタブの導線変更と居酒屋/通常ラーメンの非回帰が frontend 側テストで検出できる
+  - _Depends: 1.2, 1.3, 3.1, 3.2, 3.3, 3.4_
+  - _Requirements: 1.1, 1.2, 1.4, 3.3, 4.1, 4.2, 4.4, 4.5, 5.2, 5.3_
+  - _Boundary: Frontend tests_
+- [ ] 4.2 (P) ラーメンおまかせのバックエンド挙動をテストで固定する
+  - `RamenOmakaseService` の距離区分ごとの eligible area、`travel_time=nil`、決定的 random 注入、eligible area 0 件を unit test で確認する
+  - `/api/omakase` の ramen/izakaya 両 mode 契約、422、空結果、`distance_km`、`other_candidates`、ラーメン mode 推薦、`/api/refine` の area-lock を request spec で確認する
+  - 完了時は候補エリア選定、selected area 固定、居酒屋互換が backend 側テストで検出できる
+  - _Depends: 1.1, 2.1, 2.2, 2.3_
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.4, 4.3, 4.4, 5.1_
+  - _Boundary: Backend tests_
