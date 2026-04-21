@@ -1,3 +1,5 @@
+import type { OmakaseAreaId } from '../config/omakaseAreas';
+
 export type SearchMode = 'izakaya' | 'ramen';
 
 export type TravelTime = 'within_30min' | 'within_1hour' | '1_to_2_hours';
@@ -45,9 +47,23 @@ export type SearchResponse = {
   parsed_conditions: ParsedConditions;
 };
 
+export type IzakayaOmakaseRequest = {
+  mode?: 'izakaya';
+  area: OmakaseAreaId;
+};
+
+export type RamenOmakaseRequest = {
+  mode: 'ramen';
+  travel_time?: TravelTime;
+};
+
+export type OmakaseRequest = IzakayaOmakaseRequest | RamenOmakaseRequest;
+
 export type OmakaseMeta = {
   area_id: string;
   sub_area: string;
+  mode?: SearchMode;
+  travel_time?: TravelTime | null;
 };
 
 export type OmakaseResponse = SearchResponse & {
@@ -59,6 +75,7 @@ export type RefineRequest = {
   original_query: string;
   parsed_conditions: ParsedConditions | null;
   mode?: SearchMode;
+  origin?: 'ramen_omakase';
 };
 
 export type RefineResponse = SearchResponse;

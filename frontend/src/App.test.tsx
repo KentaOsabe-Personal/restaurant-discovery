@@ -1,10 +1,12 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
 import { searchPlaces } from './api/search';
+import { fetchOmakase } from './api/omakase';
 import { refinePlaces } from './api/refine';
-import type { SearchResponse } from './types/search';
+import type { OmakaseResponse, SearchResponse } from './types/search';
 
 vi.mock('./api/search');
+vi.mock('./api/omakase');
 vi.mock('./api/refine');
 vi.mock('./components/MapPanel', () => ({
   default: ({
@@ -619,6 +621,33 @@ describe('App - ramen-search-mode 結合テスト', () => {
   });
 });
 
+describe('App - mode-aware placeholder 統合 (Task 3.4)', () => {
+  it('初期表示の居酒屋タブでは既存の居酒屋向け placeholder を表示する', () => {
+    render(<App />);
+
+    expect(screen.getByPlaceholderText('古町の海鮮居酒屋など')).toBeInTheDocument();
+  });
+
+  it('ラーメンタブに切り替えるとラーメン向け placeholder に切り替わる', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+
+    expect(screen.getByPlaceholderText('新潟東区のこってり系など')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('古町の海鮮居酒屋など')).toBeNull();
+  });
+
+  it('ラーメンタブから居酒屋タブへ戻すと居酒屋向け placeholder に戻る', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByRole('tab', { name: '居酒屋・バー' }));
+
+    expect(screen.getByPlaceholderText('古町の海鮮居酒屋など')).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('新潟東区のこってり系など')).toBeNull();
+  });
+});
+
 describe('App - distance-filter 統合 (Task 4.1)', () => {
   beforeEach(() => {
     vi.mocked(searchPlaces).mockResolvedValue(emptyResponse);
@@ -680,6 +709,369 @@ describe('App - distance-filter 統合 (Task 4.1)', () => {
     fireEvent.submit(screen.getByRole('search'));
     await screen.findByText(/見つかりません/);
     expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('ラーメン検索', 'ramen', undefined);
+  });
+});
+
+describe('App - ramen-omakase 統合 (Task 3.2)', () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  const ramenOmakaseResponse: OmakaseResponse = {
+    recommendations: [
+      {
+        name: '古町 こってりラーメン',
+        rating: 4.4,
+        price_level: null,
+        address: '新潟市中央区古町通1-1-1',
+        google_maps_url: 'https://maps.google.com/ramen-omakase',
+        reason: '濃厚スープが評判で、古町らしい一杯を楽しめます',
+        lat: 37.92,
+        lng: 139.04,
+        distance_km: 4.2,
+      },
+    ],
+    other_candidates: [
+      {
+        name: '古町 あっさり中華そば',
+        rating: 4.1,
+        price_level: null,
+        address: '新潟市中央区古町通2-2-2',
+        google_maps_url: 'https://maps.google.com/ramen-other',
+        lat: 37.921,
+        lng: 139.041,
+        distance_km: 4.3,
+      },
+    ],
+    parsed_conditions: {
+      area: '古町',
+      genre: 'ラーメン',
+      price_level: null,
+      keyword: null,
+    },
+    omakase: {
+      area_id: 'furumachi',
+      sub_area: '古町',
+      mode: 'ramen',
+      travel_time: 'within_30min',
+    },
+  };
+
+  it('ラーメンタブでは距離フィルターとおまかせボタンを同時に使え、query未入力でも開始できる', async () => {
+    vi.mocked(fetchOmakase).mockResolvedValueOnce(ramenOmakaseResponse);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    expect(screen.getByText('30分以内')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'ラーメンをおまかせ' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('30分以内'));
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+
+    await screen.findByText('古町 こってりラーメン');
+    expect(vi.mocked(fetchOmakase)).toHaveBeenCalledWith({ mode: 'ramen', travel_time: 'within_30min' });
+    expect(screen.getByRole('textbox', { name: 'レストラン検索' })).toHaveValue('');
+  });
+
+  it('ラーメンおまかせ開始時に旧結果をリセットし、成功時は既存結果UIへ流し込む', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [
+        {
+          name: '前回のラーメン店',
+          rating: 4.0,
+          price_level: null,
+          address: '新潟市中央区1-1-1',
+          google_maps_url: 'https://maps.google.com/previous-recommendation',
+          reason: '前回のおすすめ',
+          lat: 37.91,
+          lng: 139.03,
+        },
+      ],
+      other_candidates: [
+        {
+          name: '前回の追加候補',
+          rating: 3.9,
+          price_level: null,
+          address: '新潟市中央区1-1-2',
+          google_maps_url: 'https://maps.google.com/previous-other',
+          lat: 37.9101,
+          lng: 139.0301,
+        },
+      ],
+      parsed_conditions: {
+        area: '駅前',
+        genre: 'ラーメン',
+        price_level: null,
+        keyword: '煮干し',
+      },
+    });
+
+    let resolveOmakase!: (value: OmakaseResponse) => void;
+    vi.mocked(fetchOmakase).mockReturnValueOnce(
+      new Promise<OmakaseResponse>((resolve) => {
+        resolveOmakase = resolve;
+      }),
+    );
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '駅前で煮干しラーメン' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByText('前回のラーメン店');
+    fireEvent.click(screen.getByRole('button', { name: 'もっと見る' }));
+    await screen.findByText('前回の追加候補');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+
+    expect(screen.queryByText('前回のラーメン店')).toBeNull();
+    expect(screen.queryByText('前回の追加候補')).toBeNull();
+    expect(screen.queryByText('エリア: 駅前')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'もっと見る' })).toBeNull();
+
+    await act(async () => {
+      resolveOmakase(ramenOmakaseResponse);
+    });
+
+    await screen.findByText('古町 こってりラーメン');
+    expect(screen.getByText('エリア: 古町')).toBeInTheDocument();
+    expect(screen.getByText('ジャンル: ラーメン')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'もっと見る' })).toBeInTheDocument();
+    expect(screen.getByTestId('map-panel')).toBeInTheDocument();
+    expect(screen.getByText('マーカー: 古町 こってりラーメン')).toBeInTheDocument();
+    expect(screen.getByText('マーカー: 古町 あっさり中華そば')).toBeInTheDocument();
+  });
+
+  it('候補エリアゼロの422は空状態ではなくエラー表示に分岐する', async () => {
+    vi.mocked(fetchOmakase).mockRejectedValueOnce(new Error('条件に合うラーメン激戦区がありません'));
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+
+    await screen.findByText('条件に合うラーメン激戦区がありません');
+    expect(screen.queryByText('条件に合うレストランが見つかりませんでした')).toBeNull();
+  });
+
+  it('候補店舗ゼロはエラーではなく既存の空状態として表示する', async () => {
+    vi.mocked(fetchOmakase).mockResolvedValueOnce({
+      recommendations: [],
+      other_candidates: [],
+      parsed_conditions: {
+        area: '古町',
+        genre: 'ラーメン',
+        price_level: null,
+        keyword: null,
+      },
+      omakase: {
+        area_id: 'furumachi',
+        sub_area: '古町',
+        mode: 'ramen',
+        travel_time: null,
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+
+    await screen.findByText('条件に合うレストランが見つかりませんでした');
+    expect(screen.queryByText('条件に合うラーメン激戦区がありません')).toBeNull();
+    expect(screen.getByText('エリア: 古町')).toBeInTheDocument();
+    expect(screen.getByText('ジャンル: ラーメン')).toBeInTheDocument();
+  });
+});
+
+describe('App - ramen-omakase refine origin 統合 (Task 3.3)', () => {
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  const ramenOmakaseResponse: OmakaseResponse = {
+    recommendations: [
+      {
+        name: '古町 こってりラーメン',
+        rating: 4.4,
+        price_level: null,
+        address: '新潟市中央区古町通1-1-1',
+        google_maps_url: 'https://maps.google.com/ramen-omakase-origin',
+        reason: '濃厚スープが評判で、古町らしい一杯を楽しめます',
+        lat: 37.92,
+        lng: 139.04,
+        distance_km: 4.2,
+      },
+    ],
+    other_candidates: [],
+    parsed_conditions: {
+      area: '古町',
+      genre: 'ラーメン',
+      price_level: null,
+      keyword: null,
+    },
+    omakase: {
+      area_id: 'furumachi',
+      sub_area: '古町',
+      mode: 'ramen',
+      travel_time: 'within_30min',
+    },
+  };
+
+  const ramenSearchResponse: SearchResponse = {
+    recommendations: [
+      {
+        name: '長岡 味噌ラーメン',
+        rating: 4.3,
+        price_level: null,
+        address: '長岡市大手通1-1-1',
+        google_maps_url: 'https://maps.google.com/ramen-standard',
+        reason: '通常検索のおすすめです',
+        lat: 37.45,
+        lng: 138.85,
+      },
+    ],
+    other_candidates: [],
+    parsed_conditions: {
+      area: '長岡',
+      genre: 'ラーメン',
+      price_level: null,
+      keyword: '味噌',
+    },
+  };
+
+  it('ラーメンおまかせ成功後の再レコメンドでは origin=ramen_omakase を送る', async () => {
+    vi.mocked(fetchOmakase).mockResolvedValueOnce(ramenOmakaseResponse);
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [
+        {
+          ...ramenOmakaseResponse.recommendations[0],
+          name: '古町 細麺ラーメン',
+          reason: '古町エリアの中で細麺の要望に合います',
+        },
+      ],
+      other_candidates: [],
+      parsed_conditions: {
+        ...ramenOmakaseResponse.parsed_conditions,
+        keyword: '細麺',
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+    await screen.findByText('古町 こってりラーメン');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: '細麺が食べたい' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+
+    await screen.findByText('古町 細麺ラーメン');
+
+    expect(vi.mocked(refinePlaces)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'ramen',
+        origin: 'ramen_omakase',
+        parsed_conditions: ramenOmakaseResponse.parsed_conditions,
+      }),
+    );
+  });
+
+  it('通常ラーメン検索を実行すると origin を解除し、その後の再レコメンドへ持ち込まない', async () => {
+    vi.mocked(fetchOmakase).mockResolvedValueOnce(ramenOmakaseResponse);
+    vi.mocked(searchPlaces).mockResolvedValueOnce(ramenSearchResponse);
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [
+        {
+          ...ramenSearchResponse.recommendations[0],
+          name: '長岡 こだわり味噌ラーメン',
+          reason: '通常検索結果に追加要望を反映しました',
+        },
+      ],
+      other_candidates: [],
+      parsed_conditions: {
+        ...ramenSearchResponse.parsed_conditions,
+        keyword: 'こってり',
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+    await screen.findByText('古町 こってりラーメン');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '長岡の味噌ラーメン' },
+    });
+    fireEvent.submit(screen.getByRole('textbox', { name: 'レストラン検索' }).closest('form')!);
+    await screen.findByText('長岡 味噌ラーメン');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: 'こってりがいい' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+    await screen.findByText('長岡 こだわり味噌ラーメン');
+
+    const refineRequest = vi.mocked(refinePlaces).mock.calls.at(-1)?.[0];
+    expect(refineRequest).toMatchObject({
+      mode: 'ramen',
+      parsed_conditions: ramenSearchResponse.parsed_conditions,
+    });
+    expect(refineRequest).not.toHaveProperty('origin');
+  });
+
+  it('タブ切替でも origin を解除し、通常フローへ影響させない', async () => {
+    vi.mocked(fetchOmakase).mockResolvedValueOnce(ramenOmakaseResponse);
+    vi.mocked(searchPlaces).mockResolvedValueOnce(ramenSearchResponse);
+    vi.mocked(refinePlaces).mockResolvedValueOnce({
+      recommendations: [
+        {
+          ...ramenSearchResponse.recommendations[0],
+          name: '長岡 あっさり味噌ラーメン',
+          reason: '通常検索フローの再レコメンドです',
+        },
+      ],
+      other_candidates: [],
+      parsed_conditions: {
+        ...ramenSearchResponse.parsed_conditions,
+        keyword: 'あっさり',
+      },
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ラーメンをおまかせ' }));
+    await screen.findByText('古町 こってりラーメン');
+
+    fireEvent.click(screen.getByRole('tab', { name: '居酒屋・バー' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'レストラン検索' }), {
+      target: { value: '長岡の味噌ラーメン' },
+    });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText('長岡 味噌ラーメン');
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
+      target: { value: 'あっさりがいい' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '再レコメンド' }));
+    await screen.findByText('長岡 あっさり味噌ラーメン');
+
+    const refineRequest = vi.mocked(refinePlaces).mock.calls.at(-1)?.[0];
+    expect(refineRequest).toMatchObject({
+      mode: 'ramen',
+      parsed_conditions: ramenSearchResponse.parsed_conditions,
+    });
+    expect(refineRequest).not.toHaveProperty('origin');
   });
 });
 

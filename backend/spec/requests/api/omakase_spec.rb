@@ -302,4 +302,199 @@ RSpec.describe "POST /api/omakase", type: :request do
       expect(response.parsed_body["error"]).to eq("内部エラーが発生しました")
     end
   end
+
+  describe "ラーメンモード（mode=ramen）" do
+    let(:ramen_conditions) do
+      {
+        area: "新潟市中央区",
+        genre: "ラーメン",
+        price_level: nil,
+        keyword: nil,
+        sub_area: "新潟中央区",
+        area_id: "niigata_chuo",
+        area_names: %w[中央区 古町 万代 本町],
+        travel_time: nil
+      }
+    end
+
+    let(:ramen_places) do
+      (1..5).map do |i|
+        {
+          name: "ラーメン店#{i}",
+          rating: 4.0,
+          price_level: "PRICE_LEVEL_MODERATE",
+          address: "新潟市中央区万代#{i}-1",
+          google_maps_url: "https://maps.google.com/?cid=ramen#{i}",
+          lat: 37.916 + (i * 0.001),
+          lng: 139.036 + (i * 0.001)
+        }
+      end
+    end
+
+    let(:ramen_recommendations) do
+      ramen_places.first(3).map { |p| p.merge(reason: "テスト推薦理由", distance_km: 5.0) }
+    end
+
+    describe "正常系" do
+      before do
+        allow_any_instance_of(RamenOmakaseService).to receive(:call).and_return(ramen_conditions)
+        allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(ramen_places)
+        allow_any_instance_of(DistanceCalculatorService).to receive(:call).and_return(5.0)
+        allow_any_instance_of(RecommendationService).to receive(:call).and_return(ramen_recommendations)
+      end
+
+      it "200 OK を返す" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "必須キー recommendations, other_candidates, parsed_conditions, omakase を含む" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        json = response.parsed_body
+        expect(json).to have_key("recommendations")
+        expect(json).to have_key("other_candidates")
+        expect(json).to have_key("parsed_conditions")
+        expect(json).to have_key("omakase")
+      end
+
+      it "parsed_conditions.area が selected area の表示名を返す" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        expect(response.parsed_body["parsed_conditions"]["area"]).to eq("新潟中央区")
+      end
+
+      it "parsed_conditions.genre が「ラーメン」を返す" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        expect(response.parsed_body["parsed_conditions"]["genre"]).to eq("ラーメン")
+      end
+
+      it "recommendations に distance_km が含まれる" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        json = response.parsed_body
+        json["recommendations"].each do |rec|
+          expect(rec).to have_key("distance_km")
+        end
+      end
+
+      it "other_candidates に非採用候補が含まれる" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        expect(response.parsed_body["other_candidates"]).not_to be_empty
+      end
+
+      it "other_candidates に distance_km が含まれる" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        json = response.parsed_body
+        json["other_candidates"].each do |c|
+          expect(c).to have_key("distance_km")
+        end
+      end
+
+      it "omakase に mode, area_id, sub_area, travel_time が含まれる" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        json = response.parsed_body
+        expect(json["omakase"]).to include(
+          "mode" => "ramen",
+          "area_id" => "niigata_chuo",
+          "sub_area" => "新潟中央区",
+          "travel_time" => nil
+        )
+      end
+
+      it "RecommendationService に mode: ramen が渡される" do
+        expect_any_instance_of(RecommendationService).to receive(:call)
+          .with(anything, anything, hash_including(mode: "ramen"))
+          .and_return(ramen_recommendations)
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+      end
+
+      it "QueryParserService を呼ばない" do
+        expect_any_instance_of(QueryParserService).not_to receive(:call)
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+      end
+    end
+
+    describe "travel_time 付き" do
+      before do
+        allow_any_instance_of(RamenOmakaseService).to receive(:call)
+          .and_return(ramen_conditions.merge(travel_time: "within_30min"))
+        allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(ramen_places)
+        allow_any_instance_of(DistanceCalculatorService).to receive(:call).and_return(10.0)
+        allow_any_instance_of(RecommendationService).to receive(:call).and_return(ramen_recommendations)
+      end
+
+      it "200 OK を返す" do
+        post "/api/omakase", params: { mode: "ramen", travel_time: "within_30min" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "omakase.travel_time に指定値が反映される" do
+        post "/api/omakase", params: { mode: "ramen", travel_time: "within_30min" }.to_json, headers: valid_headers
+        expect(response.parsed_body["omakase"]["travel_time"]).to eq("within_30min")
+      end
+    end
+
+    describe "バリデーション — travel_time 不正値" do
+      it "無効な travel_time のとき 422 を返す" do
+        post "/api/omakase", params: { mode: "ramen", travel_time: "invalid" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body).to have_key("error")
+      end
+    end
+
+    describe "候補エリアゼロ（NoEligibleArea）" do
+      before do
+        allow_any_instance_of(RamenOmakaseService).to receive(:call)
+          .and_raise(RamenOmakaseService::NoEligibleArea, "条件に合うラーメン激戦区が見つかりませんでした")
+      end
+
+      it "422 を返す" do
+        post "/api/omakase", params: { mode: "ramen", travel_time: "within_30min" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+
+      it "サービスのエラーメッセージをそのまま返す" do
+        post "/api/omakase", params: { mode: "ramen", travel_time: "within_30min" }.to_json, headers: valid_headers
+        expect(response.parsed_body["error"]).to eq("条件に合うラーメン激戦区が見つかりませんでした")
+      end
+    end
+
+    describe "候補店舗ゼロ（places 0 件）" do
+      before do
+        allow_any_instance_of(RamenOmakaseService).to receive(:call).and_return(ramen_conditions)
+        allow_any_instance_of(GooglePlacesService).to receive(:call).and_return([])
+      end
+
+      it "200 OK で recommendations が空配列を返す" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body["recommendations"]).to eq([])
+      end
+
+      it "parsed_conditions.area が selected area を返す" do
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+        expect(response.parsed_body["parsed_conditions"]["area"]).to eq("新潟中央区")
+      end
+
+      it "RecommendationService を呼ばない" do
+        expect_any_instance_of(RecommendationService).not_to receive(:call)
+        post "/api/omakase", params: { mode: "ramen" }.to_json, headers: valid_headers
+      end
+    end
+
+    describe "既存居酒屋リクエストへの非回帰" do
+      before do
+        allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(sample_places.first(5))
+        allow_any_instance_of(RecommendationService).to receive(:call).and_return(sample_recommendations)
+      end
+
+      it "mode 未指定で area=ekimae のとき 200 OK を返す" do
+        post "/api/omakase", params: { area: "ekimae" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "mode=izakaya で area=ekimae のとき 200 OK を返す" do
+        post "/api/omakase", params: { mode: "izakaya", area: "ekimae" }.to_json, headers: valid_headers
+        expect(response).to have_http_status(:ok)
+      end
+    end
+  end
 end

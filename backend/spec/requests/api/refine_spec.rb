@@ -209,6 +209,56 @@ RSpec.describe "POST /api/refine", type: :request do
     end
   end
 
+  describe "ラーメンおまかせ起点（origin=ramen_omakase）の area-lock" do
+    let(:ramen_omakase_conditions) { { area: "新潟中央区", genre: "ラーメン", price_level: nil, keyword: nil } }
+
+    before do
+      allow_any_instance_of(GooglePlacesService).to receive(:call).and_return(places)
+      allow_any_instance_of(RecommendationService).to receive(:call).and_return(recommendations)
+    end
+
+    it "origin=ramen_omakase のとき parsed_conditions.area が selected area を維持する" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(
+        { area: "長岡", genre: nil, price_level: nil, keyword: "こってり" }
+      )
+      params = {
+        feedback: "こってり系が良い",
+        mode: "ramen",
+        origin: "ramen_omakase",
+        parsed_conditions: ramen_omakase_conditions
+      }.to_json
+      post "/api/refine", params: params, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["area"]).to eq("新潟中央区")
+    end
+
+    it "origin=ramen_omakase のとき area 以外の delta 条件は反映される" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(
+        { area: "長岡", genre: nil, price_level: nil, keyword: "こってり" }
+      )
+      params = {
+        feedback: "こってり系が良い",
+        mode: "ramen",
+        origin: "ramen_omakase",
+        parsed_conditions: ramen_omakase_conditions
+      }.to_json
+      post "/api/refine", params: params, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["keyword"]).to eq("こってり")
+    end
+
+    it "origin なし（通常ラーメン refine）では area が delta で上書きされる" do
+      allow_any_instance_of(QueryParserService).to receive(:call).and_return(
+        { area: "長岡", genre: nil, price_level: nil, keyword: nil }
+      )
+      params = {
+        feedback: "長岡に変えて",
+        mode: "ramen",
+        parsed_conditions: ramen_omakase_conditions
+      }.to_json
+      post "/api/refine", params: params, headers: valid_headers
+      expect(response.parsed_body["parsed_conditions"]["area"]).to eq("長岡")
+    end
+  end
+
   describe "エラーハンドリング" do
     it "QueryParserError が発生したとき 502 を返す" do
       allow_any_instance_of(QueryParserService).to receive(:call).and_raise(QueryParserError, "failed")

@@ -12,10 +12,14 @@ import FeedbackInput from './components/FeedbackInput';
 import MapPanel from './components/MapPanel';
 import ModeTabs from './components/ModeTabs';
 import DistanceFilterButtons from './components/DistanceFilterButtons';
+import RamenOmakaseButton from './components/RamenOmakaseButton';
 import { omakaseAreas } from './config/omakaseAreas';
 import type { OmakaseAreaId } from './config/omakaseAreas';
 import { fetchOmakase } from './api/omakase';
 import { useSearchHistory } from './hooks/useSearchHistory';
+
+const IZAKAYA_PLACEHOLDER = '古町の海鮮居酒屋など';
+const RAMEN_PLACEHOLDER = '新潟東区のこってり系など';
 
 function App() {
   const [activeTab, setActiveTab] = useState<SearchMode>('izakaya');
@@ -26,6 +30,7 @@ function App() {
   const [otherCandidates, setOtherCandidates] = useState<OtherCandidate[] | null>(null);
   const [showOtherCandidates, setShowOtherCandidates] = useState<boolean>(false);
   const [parsedConditions, setParsedConditions] = useState<ParsedConditions | null>(null);
+  const [refineOrigin, setRefineOrigin] = useState<'ramen_omakase' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedGoogleMapsUrl, setSelectedGoogleMapsUrl] = useState<string | null>(null);
   const [infoWindowVisible, setInfoWindowVisible] = useState<boolean>(false);
@@ -38,6 +43,7 @@ function App() {
     setRecommendations(null);
     setOtherCandidates(null);
     setParsedConditions(null);
+    setRefineOrigin(null);
     setError(null);
     setShowOtherCandidates(false);
     setSelectedGoogleMapsUrl(null);
@@ -76,6 +82,7 @@ function App() {
     setOtherCandidates(null);
     setShowOtherCandidates(false);
     setParsedConditions(null);
+    setRefineOrigin(null);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
     try {
@@ -91,6 +98,31 @@ function App() {
     }
   }
 
+  async function handleRamenOmakase(): Promise<void> {
+    setIsLoading(true);
+    setError(null);
+    setRecommendations(null);
+    setOtherCandidates(null);
+    setShowOtherCandidates(false);
+    setParsedConditions(null);
+    setQuery('');
+    setRefineOrigin(null);
+    setSelectedGoogleMapsUrl(null);
+    setInfoWindowVisible(false);
+    try {
+      const request = distanceFilter === null ? { mode: 'ramen' as const } : { mode: 'ramen' as const, travel_time: distanceFilter };
+      const response = await fetchOmakase(request);
+      setRecommendations(response.recommendations);
+      setOtherCandidates(response.other_candidates);
+      setParsedConditions(response.parsed_conditions);
+      setRefineOrigin('ramen_omakase');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'おまかせ取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   async function handleOmakase(areaId: OmakaseAreaId): Promise<void> {
     setIsLoading(true);
     setError(null);
@@ -99,10 +131,11 @@ function App() {
     setShowOtherCandidates(false);
     setParsedConditions(null);
     setQuery('');
+    setRefineOrigin(null);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
     try {
-      const response = await fetchOmakase(areaId);
+      const response = await fetchOmakase({ area: areaId });
       setRecommendations(response.recommendations);
       setOtherCandidates(response.other_candidates);
       setParsedConditions(response.parsed_conditions);
@@ -117,11 +150,22 @@ function App() {
     setIsRefineLoading(true);
     setError(null);
     try {
+      const request = refineOrigin === null
+        ? {
+            feedback,
+            original_query: query,
+            parsed_conditions: parsedConditions,
+            mode: activeTab,
+          }
+        : {
+            feedback,
+            original_query: query,
+            parsed_conditions: parsedConditions,
+            mode: activeTab,
+            origin: refineOrigin,
+          };
       const response = await refinePlaces({
-        feedback,
-        original_query: query,
-        parsed_conditions: parsedConditions,
-        mode: activeTab,
+        ...request,
       });
       setRecommendations(response.recommendations);
       setOtherCandidates(response.other_candidates);
@@ -142,16 +186,22 @@ function App() {
   );
 
   const hasResults = recommendations !== null && recommendations.length > 0;
+  const searchPlaceholder = activeTab === 'ramen' ? RAMEN_PLACEHOLDER : IZAKAYA_PLACEHOLDER;
 
   return (
     <div className={hasResults ? 'flex h-screen overflow-hidden' : 'min-h-screen bg-gray-100'}>
       <div className={hasResults ? 'w-1/2 overflow-y-auto p-4' : 'max-w-3xl mx-auto px-4 py-8'}>
         <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
         <ModeTabs activeTab={activeTab} onTabChange={handleTabChange} />
-        <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} />
+        <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} placeholder={searchPlaceholder} />
         <SearchHistoryChips history={history} onSelect={handleHistorySelect} onRemove={removeFromHistory} onClear={clearHistory} isLoading={isLoading} />
         {activeTab === 'izakaya' && <OmakaseButtons areas={omakaseAreas} onSelect={handleOmakase} isLoading={isLoading} />}
-        {activeTab === 'ramen' && <DistanceFilterButtons value={distanceFilter} onChange={setDistanceFilter} />}
+        {activeTab === 'ramen' && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <DistanceFilterButtons value={distanceFilter} onChange={setDistanceFilter} />
+            <RamenOmakaseButton onClick={handleRamenOmakase} isLoading={isLoading} />
+          </div>
+        )}
         {!isLoading && parsedConditions !== null && <SearchConditionTags parsedConditions={parsedConditions} />}
         {isLoading && <p className="text-gray-500 italic">読み込み中...</p>}
         {error !== null && !isLoading && <p className="text-red-600">{error}</p>}

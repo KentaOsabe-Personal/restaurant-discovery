@@ -3,9 +3,10 @@ export interface SearchInputProps {
   onChange: (query: string) => void;
   onSubmit: (query: string) => void;
   isLoading?: boolean;
+  placeholder: string;
 }
 
-function SearchInput({ value, onChange, onSubmit, isLoading = false }: SearchInputProps) {
+function SearchInput({ value, onChange, onSubmit, isLoading = false, placeholder }: SearchInputProps) {
   const isSubmitDisabled = value.trim() === '' || isLoading;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -18,7 +19,7 @@ function SearchInput({ value, onChange, onSubmit, isLoading = false }: SearchInp
     <form role="search" onSubmit={handleSubmit} aria-busy={isLoading} className="flex w-full gap-2">
       <input
         type="text"
-        placeholder="古町の海鮮居酒屋など"
+        placeholder={placeholder}
         aria-label="レストラン検索"
         value={value}
         onChange={(e) => onChange(e.target.value)}
