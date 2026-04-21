@@ -1,8 +1,11 @@
 export type SearchMode = 'izakaya' | 'ramen';
 
+export type TravelTime = 'within_30min' | 'within_1hour' | '1_to_2_hours';
+
 export type SearchRequest = {
   query: string;
   mode?: SearchMode;
+  travel_time?: TravelTime;
 };
 
 export type SearchHistoryEntry = {
@@ -18,6 +21,7 @@ export type Candidate = {
   google_maps_url: string;
   lat: number | null;
   lng: number | null;
+  distance_km?: number | null;
 };
 
 /** AIが推薦した店舗（理由付き） */

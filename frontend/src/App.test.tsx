@@ -501,7 +501,7 @@ describe('App - ramen-search-mode 結合テスト', () => {
 
     await screen.findByText('ジャンル: ラーメン');
     expect(screen.getByText('エリア: 駅前')).toBeInTheDocument();
-    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('駅前で味噌ラーメン', 'ramen');
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('駅前で味噌ラーメン', 'ramen', undefined);
   });
 
   it('ラーメンフィードバック: refinePlaces が mode=ramen で呼ばれる（Req 4.1）', async () => {
@@ -603,7 +603,7 @@ describe('App - ramen-search-mode 結合テスト', () => {
     await screen.findByText('居酒屋テスト');
 
     // mode=izakaya で searchPlaces が呼ばれることを確認
-    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('長岡の居酒屋', 'izakaya');
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('長岡の居酒屋', 'izakaya', undefined);
 
     // フィードバックを送信
     fireEvent.change(screen.getByRole('textbox', { name: 'フィードバック入力' }), {
@@ -616,6 +616,70 @@ describe('App - ramen-search-mode 結合テスト', () => {
     expect(vi.mocked(refinePlaces)).toHaveBeenCalledWith(
       expect.objectContaining({ mode: 'izakaya' }),
     );
+  });
+});
+
+describe('App - distance-filter 統合 (Task 4.1)', () => {
+  beforeEach(() => {
+    vi.mocked(searchPlaces).mockResolvedValue(emptyResponse);
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('ラーメンタブに切り替えると距離フィルターボタンが4つ表示される (Req 2.1)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    expect(screen.getByText('30分以内')).toBeInTheDocument();
+    expect(screen.getByText('1時間以内')).toBeInTheDocument();
+    expect(screen.getByText('1時間以上2時間以内')).toBeInTheDocument();
+    expect(screen.getByText('距離指定なし')).toBeInTheDocument();
+  });
+
+  it('初期表示（居酒屋タブ）では距離フィルターボタンが表示されない (Req 2.2)', () => {
+    render(<App />);
+    expect(screen.queryByText('30分以内')).toBeNull();
+    expect(screen.queryByText('1時間以内')).toBeNull();
+  });
+
+  it('ラーメンから居酒屋タブに切り替えると距離フィルターボタンが非表示になる (Req 2.2)', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    expect(screen.getByText('30分以内')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: '居酒屋・バー' }));
+    expect(screen.queryByText('30分以内')).toBeNull();
+  });
+
+  it('距離フィルター選択状態で検索するとtravelTimeがsearchPlacesに渡される (Req 3.1)', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByText('30分以内'));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新潟のラーメン' } });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText(/見つかりません/);
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('新潟のラーメン', 'ramen', 'within_30min');
+  });
+
+  it('距離指定なし（null）でラーメン検索するとtravelTimeがundefinedで渡される (Req 3.2)', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '新潟のラーメン' } });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText(/見つかりません/);
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('新潟のラーメン', 'ramen', undefined);
+  });
+
+  it('タブ切替でdistanceFilterがリセットされ、再検索時にtravelTimeがundefinedになる (Req 2.4)', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.click(screen.getByText('1時間以内'));
+    fireEvent.click(screen.getByRole('tab', { name: '居酒屋・バー' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'ラーメン' }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ラーメン検索' } });
+    fireEvent.submit(screen.getByRole('search'));
+    await screen.findByText(/見つかりません/);
+    expect(vi.mocked(searchPlaces)).toHaveBeenCalledWith('ラーメン検索', 'ramen', undefined);
   });
 });
 

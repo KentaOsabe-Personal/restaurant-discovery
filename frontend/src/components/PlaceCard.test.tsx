@@ -167,6 +167,28 @@ describe('PlaceCard', () => {
     });
   });
 
+  describe('distance_km 表示 (Task 4.2)', () => {
+    it('distance_km が数値の場合に距離バッジが表示される', () => {
+      render(<PlaceCard {...baseProps} distance_km={15.3} />);
+      expect(screen.getByText('15.3 km')).toBeInTheDocument();
+    });
+
+    it('distance_km が 0 の場合も距離バッジが表示される', () => {
+      render(<PlaceCard {...baseProps} distance_km={0} />);
+      expect(screen.getByText('0.0 km')).toBeInTheDocument();
+    });
+
+    it('distance_km が null の場合に距離バッジが表示されない', () => {
+      render(<PlaceCard {...baseProps} distance_km={null} />);
+      expect(screen.queryByText(/km/)).not.toBeInTheDocument();
+    });
+
+    it('distance_km が undefined の場合（居酒屋）に距離バッジが表示されない', () => {
+      render(<PlaceCard {...baseProps} />);
+      expect(screen.queryByText(/km/)).not.toBeInTheDocument();
+    });
+  });
+
   describe('Task 3.3: formatPriceLevel ユニットテスト', () => {
     it('PRICE_LEVEL_INEXPENSIVE → ¥', () => {
       render(<PlaceCard {...baseProps} price_level="PRICE_LEVEL_INEXPENSIVE" />);

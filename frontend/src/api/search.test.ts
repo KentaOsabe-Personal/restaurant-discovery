@@ -107,4 +107,40 @@ describe('searchPlaces', () => {
 
     await expect(searchPlaces('渋谷のランチ')).rejects.toThrow('Failed to fetch');
   });
+
+  it('travelTime を指定するとリクエストボディに travel_time が含まれる', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockSearchResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await searchPlaces('新潟のラーメン', 'ramen', 'within_1hour');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '新潟のラーメン', mode: 'ramen', travel_time: 'within_1hour' }),
+    });
+  });
+
+  it('travelTime を指定しないとリクエストボディに travel_time キーが含まれない', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(mockSearchResponse), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await searchPlaces('新潟のラーメン', 'ramen');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: '新潟のラーメン', mode: 'ramen' }),
+    });
+  });
 });
