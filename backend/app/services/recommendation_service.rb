@@ -27,17 +27,23 @@ class RecommendationService
     最も適した %<min>d〜%<max>d 件を選んでください。
 
     ## 選定基準（優先順）
-    1. 条件との一致度: conditions が提供された場合は area/price_level との一致を最優先にしてください
-    2. ラーメン特徴: 味の系統（味噌・豚骨・醤油・塩など）、麺の太さ、スープの種類を考慮してください
-    3. 評価（rating）: 4.0以上を優秀、3.5〜4.0を普通、3.5未満は他に代替がなければ避けてください
+    1. 条件との一致度（最優先）
+       - keyword で指定された味/種類（塩・醤油・味噌・豚骨・まぜそば等）を
+         看板メニューまたは主力商品としている可能性が高い店を優先
+       - 店名・特徴から指定の味と明らかに異なると判断できる場合は候補から外す
+    2. 評価（rating）: 4.0以上を優秀、3.5〜4.0を普通、3.5未満は他に代替がなければ避けてください
+    3. 価格帯（price_level）: conditions で価格帯が指定されている場合は必ず一致させてください
 
     ## 除外基準
     - rating が null かつ同等の評価済み候補がある場合は除外
     - conditions の価格帯と明確に合わない場合は除外
+    - keyword で指定された味/種類を提供していないことが店名・情報から明らかな場合は除外
+      （例: 塩ラーメン検索でまぜそば専門店、醤油ラーメン検索でつけ麺専門店）
+    - 条件に合致する可能性が高い候補がある場合、合致度が不確かな候補より優先すること
 
     ## 出力規則
     - candidates に含まれる name をそのまま使用してください（変更・省略・翻訳不可）
-    - reason: 他の候補と比べてなぜこの店を推薦するか、味の系統・麺の太さ・スープの特徴を含めて日本語で1〜2文で説明
+    - reason: 指定された味/種類が看板メニューである根拠（店名・既知の評判など）を含める。根拠が不明な場合はその旨を明記した上で推薦する
   PROMPT
 
   RESPONSE_SCHEMA = {
@@ -72,6 +78,7 @@ class RecommendationService
 
     places = prefilter(places, min_count)
     prompt = build_prompt(min_count, max_count, feedback, mode)
+    Rails.logger.debug("[RecommendationService] mode=#{mode}\n#{prompt}")
     client = build_client
     response = client.chat(
       parameters: {
