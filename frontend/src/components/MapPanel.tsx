@@ -18,6 +18,7 @@ export interface MapPanelProps {
   infoWindowVisible: boolean;
   onMarkerClick: (googleMapsUrl: string) => void;
   onInfoWindowClose: () => void;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 type ValidCandidate = Candidate & { lat: number; lng: number };
@@ -57,6 +58,7 @@ function MapPanelContent({
   infoWindowVisible,
   onMarkerClick,
   onInfoWindowClose,
+  userLocation,
 }: MapPanelProps) {
   const status = useApiLoadingStatus();
 
@@ -106,6 +108,11 @@ function MapPanelContent({
             <p>{selectedCandidate.address}</p>
           </div>
         </InfoWindow>
+      )}
+      {userLocation != null && (
+        <AdvancedMarker position={userLocation}>
+          <Pin background="#4285F4" glyphColor="#fff" borderColor="#1a73e8" />
+        </AdvancedMarker>
       )}
     </Map>
   );
