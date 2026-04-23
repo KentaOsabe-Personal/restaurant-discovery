@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
+import type { Candidate } from '../types/search';
 import MapPanel from './MapPanel';
 
-const mockUseApiLoadingStatus = vi.fn<[], string>();
+const mockUseApiLoadingStatus = vi.fn<() => string>();
 
 vi.mock('@vis.gl/react-google-maps', () => ({
   APIProvider: ({ children }: { children: any }) => children,
@@ -16,7 +17,7 @@ vi.mock('@vis.gl/react-google-maps', () => ({
 }));
 
 const defaultProps = {
-  candidates: [],
+  candidates: [] as Candidate[],
   selectedGoogleMapsUrl: null,
   infoWindowVisible: false,
   onMarkerClick: vi.fn(),
