@@ -9,6 +9,8 @@ class GooglePlacesService
     PRICE_LEVEL_EXPENSIVE
     PRICE_LEVEL_VERY_EXPENSIVE
   ].freeze
+  RAMEN_FLAVOR_MODIFIERS = %w[塩 醤油 味噌 豚骨 鶏白湯 鶏清湯 あっさり こってり 辛].freeze
+  RAMEN_STANDALONE_TYPES = %w[まぜそば つけ麺 担々麺 油そば].freeze
 
   def call(conditions)
     connection = build_connection
@@ -54,9 +56,19 @@ class GooglePlacesService
   end
 
   def build_text_query(conditions)
-    [ conditions[:area], conditions[:genre], conditions[:keyword] ]
-      .compact
-      .join(" ")
+    area = conditions[:area]
+    genre = conditions[:genre]
+    keyword = conditions[:keyword]
+
+    if genre == "ラーメン" && keyword.present?
+      if RAMEN_FLAVOR_MODIFIERS.include?(keyword)
+        return [ area, "#{keyword}ラーメン" ].compact.join(" ")
+      elsif RAMEN_STANDALONE_TYPES.include?(keyword)
+        return [ area, keyword ].compact.join(" ")
+      end
+    end
+
+    [ area, genre, keyword ].compact.join(" ")
   end
 
   def format_places(response_body)

@@ -422,7 +422,7 @@ RSpec.describe RecommendationService do
           ).to have_been_made
         end
 
-        it "システムプロンプトにラーメン固有の特徴（味の系統・麺の太さ等）の選定基準が含まれる" do
+        it "システムプロンプトにラーメン固有の選定基準（味/種類合致度優先）が含まれる" do
           stub_openai_success([ { name: "ラーメン店A", reason: "こってりスープが特徴" } ])
 
           service.call(places, "味噌ラーメン", mode: "ramen")
@@ -432,7 +432,7 @@ RSpec.describe RecommendationService do
               body = JSON.parse(req.body)
               system_message = body["messages"].find { |m| m["role"] == "system" }
               content = system_message["content"]
-              content.include?("味の系統") || content.include?("麺の太さ") || content.include?("スープ")
+              content.include?("看板メニュー") || content.include?("主力")
             }
           ).to have_been_made
         end
@@ -491,6 +491,86 @@ RSpec.describe RecommendationService do
           ).to have_been_made
         end
       end
+    end
+  end
+
+  describe "ログ出力の検証" do
+    let(:places) { [ build_place(name: "テスト店舗", rating: 4.0) ] }
+
+    before do
+      allow(Rails.logger).to receive(:debug)
+    end
+
+    it "mode: 'ramen' のとき '[RecommendationService] mode=ramen\\n<プロンプト全文>' 形式でログ出力される" do
+      stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+      expected_prompt = format(described_class::RAMEN_SYSTEM_PROMPT_TEMPLATE, min: 3, max: 5)
+      expected_log = "[RecommendationService] mode=ramen\n#{expected_prompt}"
+
+      service.call(places, "塩ラーメン", mode: "ramen")
+
+      expect(Rails.logger).to have_received(:debug).with(expected_log)
+    end
+
+    it "mode: 'izakaya' のとき '[RecommendationService] mode=izakaya\\n<プロンプト全文>' 形式でログ出力される" do
+      stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+      expected_prompt = format(described_class::SYSTEM_PROMPT_TEMPLATE, min: 3, max: 5)
+      expected_log = "[RecommendationService] mode=izakaya\n#{expected_prompt}"
+
+      service.call(places, "居酒屋", mode: "izakaya")
+
+      expect(Rails.logger).to have_received(:debug).with(expected_log)
+    end
+
+    it "mode 省略時（デフォルト izakaya）もログ出力される" do
+      stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+      expected_prompt = format(described_class::SYSTEM_PROMPT_TEMPLATE, min: 3, max: 5)
+      expected_log = "[RecommendationService] mode=izakaya\n#{expected_prompt}"
+
+      service.call(places, "居酒屋")
+
+      expect(Rails.logger).to have_received(:debug).with(expected_log)
+    end
+
+    it "feedback あり ramen の場合、フィードバック付きプロンプト全文がログに含まれる" do
+      stub_openai_success([ { name: "テスト店舗", reason: "理由" } ])
+      allow(Rails.logger).to receive(:debug)
+
+      service.call(places, "塩ラーメン", mode: "ramen", feedback: "太麺希望")
+
+      expect(Rails.logger).to have_received(:debug).with(
+        a_string_matching(/\[RecommendationService\] mode=ramen/).and(a_string_including("太麺希望"))
+      )
+    end
+  end
+
+  describe "RAMEN_SYSTEM_PROMPT_TEMPLATE" do
+    subject(:template) { described_class::RAMEN_SYSTEM_PROMPT_TEMPLATE }
+
+    it "味/種類合致度を最優先選定基準として含む（看板メニューまたは主力商品）" do
+      expect(template.include?("看板メニュー") || template.include?("主力")).to be true
+    end
+
+    it "味/種類不一致の除外指示を含む（明らかかつ除外の文字列）" do
+      expect(template).to include("明らか")
+      expect(template).to include("除外")
+    end
+
+    it "reason に根拠記載要求を含む" do
+      expect(template).to include("根拠")
+    end
+
+    it "rating 3.5 閾値を含む（既存基準維持）" do
+      expect(template).to include("3.5")
+    end
+
+    it "価格帯除外基準を含む（既存基準維持）" do
+      expect(template).to include("価格帯")
+      expect(template).to include("除外")
+    end
+
+    it "%<min>d / %<max>d フォーマット変数を含む（フィードバックロジック維持）" do
+      expect(template).to include("%<min>d")
+      expect(template).to include("%<max>d")
     end
   end
 

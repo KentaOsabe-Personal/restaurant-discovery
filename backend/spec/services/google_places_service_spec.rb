@@ -248,6 +248,86 @@ RSpec.describe GooglePlacesService do
     end
   end
 
+  describe "#build_text_query" do
+    context "ラーメンモード + 味修飾語" do
+      it "塩 × ラーメン → '新潟市中央区 塩ラーメン'" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "ラーメン", price_level: nil, keyword: "塩")
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 塩ラーメン"
+          }
+        ).to have_been_made
+      end
+
+      it "味噌 × ラーメン → '新潟市中央区 味噌ラーメン'" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "ラーメン", price_level: nil, keyword: "味噌")
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 味噌ラーメン"
+          }
+        ).to have_been_made
+      end
+    end
+
+    context "ラーメンモード + 独立種類語" do
+      it "まぜそば × ラーメン → '新潟市中央区 まぜそば'" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "ラーメン", price_level: nil, keyword: "まぜそば")
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 まぜそば"
+          }
+        ).to have_been_made
+      end
+
+      it "つけ麺 × ラーメン → '新潟市中央区 つけ麺'" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "ラーメン", price_level: nil, keyword: "つけ麺")
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 つけ麺"
+          }
+        ).to have_been_made
+      end
+    end
+
+    context "ラーメンモード + 未知キーワード（fallback）" do
+      it "太麺 × ラーメン → '新潟市中央区 ラーメン 太麺'（既存動作）" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "ラーメン", price_level: nil, keyword: "太麺")
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 ラーメン 太麺"
+          }
+        ).to have_been_made
+      end
+
+      it "keyword nil × ラーメン → '新潟市中央区 ラーメン'（compact 動作）" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "ラーメン", price_level: nil, keyword: nil)
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 ラーメン"
+          }
+        ).to have_been_made
+      end
+    end
+
+    context "非ラーメンジャンル（既存動作不変）" do
+      it "塩 × 居酒屋 → '新潟市中央区 居酒屋 塩'" do
+        stub_places_success([])
+        service.call(area: "新潟市中央区", genre: "居酒屋", price_level: nil, keyword: "塩")
+        expect(
+          a_request(:post, places_endpoint).with { |req|
+            JSON.parse(req.body)["textQuery"] == "新潟市中央区 居酒屋 塩"
+          }
+        ).to have_been_made
+      end
+    end
+  end
+
   private
 
   def stub_places_success(places)
