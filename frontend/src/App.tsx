@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { Recommendation, OtherCandidate, ParsedConditions, SearchMode, TravelTime } from './types/search';
 import { searchPlaces } from './api/search';
 import { refinePlaces } from './api/refine';
@@ -36,6 +36,15 @@ function App() {
   const [infoWindowVisible, setInfoWindowVisible] = useState<boolean>(false);
   const [distanceFilter, setDistanceFilter] = useState<TravelTime | null>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory(activeTab);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+    );
+  }, []);
 
   function handleTabChange(mode: SearchMode): void {
     setActiveTab(mode);
@@ -240,6 +249,7 @@ function App() {
             infoWindowVisible={infoWindowVisible}
             onMarkerClick={handleMarkerClick}
             onInfoWindowClose={handleInfoWindowClose}
+            userLocation={userLocation}
           />
         </div>
       )}
