@@ -2,6 +2,8 @@
 
 ## 概要
 
+_status: 2026-04-25 時点で、下記ロードマップの主要機能はコードへ反映済み。今後は精度改善・UI調整・テスト拡充の基準として扱う。_
+
 既存の居酒屋・バー検索に加え、ラーメン屋検索モードを新設する。
 画面上部にタブを設置し、2つの検索体験を切り替えられるようにする。
 既存の検索パイプライン（QueryParser → GooglePlaces → Recommendation）をモードパラメータで拡張し、ラーメン固有のプロンプト・検索パラメータに対応する。
@@ -47,6 +49,6 @@
 
 ## Specs (dependency order)
 
-- [ ] ramen-search-mode -- タブUI + ラーメン検索基本形（フロントエンド＆バックエンド一気通貫）. Dependencies: none
-- [ ] distance-filter -- 自宅位置config + 距離フィルターUI + バックエンドロジック. Dependencies: ramen-search-mode
-- [ ] ramen-omakase -- ラーメンおまかせ機能（距離ベース + エリアランダム選定）. Dependencies: ramen-search-mode, distance-filter
+- [x] ramen-search-mode -- タブUI + ラーメン検索基本形（フロントエンド＆バックエンド一気通貫）. Dependencies: none
+- [x] distance-filter -- 自宅位置config + 距離フィルターUI + バックエンドロジック. Dependencies: ramen-search-mode
+- [x] ramen-omakase -- ラーメンおまかせ機能（距離ベース + エリアランダム選定）. Dependencies: ramen-search-mode, distance-filter

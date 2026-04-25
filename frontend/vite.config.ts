@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
     host: true,
+    allowedHosts: ["macbook-air.tail6c3261.ts.net"],
     port: 5173,
     proxy: {
       "/api": {
