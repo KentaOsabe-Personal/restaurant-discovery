@@ -62,6 +62,42 @@ describe('App', () => {
     await screen.findByText('テストレストラン');
   });
 
+  it('スマホ向けに地図表示をボタンで開閉できる', async () => {
+    vi.mocked(searchPlaces).mockResolvedValueOnce({
+      recommendations: [
+        {
+          name: 'テストレストラン',
+          rating: 4.5,
+          price_level: 'PRICE_LEVEL_MODERATE',
+          address: '東京都渋谷区テスト1-1-1',
+          google_maps_url: 'https://maps.google.com/test',
+          reason: '雰囲気が良くておすすめです',
+          lat: 35.6595,
+          lng: 139.7004,
+        },
+      ],
+      other_candidates: [],
+      parsed_conditions: { area: null, genre: null, price_level: null, keyword: null },
+    });
+
+    render(<App />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '渋谷でイタリアン' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await screen.findByRole('button', { name: '地図を表示' });
+    expect(screen.getAllByTestId('map-panel')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: '地図を表示' }));
+
+    expect(screen.getByRole('button', { name: '地図を閉じる' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('map-panel')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: '地図を閉じる' }));
+
+    expect(screen.getByRole('button', { name: '地図を表示' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('map-panel')).toHaveLength(1);
+  });
+
   it('空状態シナリオ: 空配列のとき空状態メッセージが表示される', async () => {
     vi.mocked(searchPlaces).mockResolvedValueOnce(emptyResponse);
 
