@@ -34,6 +34,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedGoogleMapsUrl, setSelectedGoogleMapsUrl] = useState<string | null>(null);
   const [infoWindowVisible, setInfoWindowVisible] = useState<boolean>(false);
+  const [isMobileMapVisible, setIsMobileMapVisible] = useState<boolean>(false);
   const [distanceFilter, setDistanceFilter] = useState<TravelTime | null>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory(activeTab);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -57,6 +58,7 @@ function App() {
     setShowOtherCandidates(false);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
+    setIsMobileMapVisible(false);
     setDistanceFilter(null);
   }
 
@@ -94,6 +96,7 @@ function App() {
     setRefineOrigin(null);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
+    setIsMobileMapVisible(false);
     try {
       const travelTime = activeTab === 'ramen' && distanceFilter !== null ? distanceFilter : undefined;
       const response = await searchPlaces(query, activeTab, travelTime);
@@ -118,6 +121,7 @@ function App() {
     setRefineOrigin(null);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
+    setIsMobileMapVisible(false);
     try {
       const request = distanceFilter === null ? { mode: 'ramen' as const } : { mode: 'ramen' as const, travel_time: distanceFilter };
       const response = await fetchOmakase(request);
@@ -143,6 +147,7 @@ function App() {
     setRefineOrigin(null);
     setSelectedGoogleMapsUrl(null);
     setInfoWindowVisible(false);
+    setIsMobileMapVisible(false);
     try {
       const response = await fetchOmakase({ area: areaId });
       setRecommendations(response.recommendations);
@@ -182,6 +187,7 @@ function App() {
       setShowOtherCandidates(false);
       setSelectedGoogleMapsUrl(null);
       setInfoWindowVisible(false);
+      setIsMobileMapVisible(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : '再レコメンドに失敗しました');
     } finally {
@@ -196,10 +202,20 @@ function App() {
 
   const hasResults = recommendations !== null && recommendations.length > 0;
   const searchPlaceholder = activeTab === 'ramen' ? RAMEN_PLACEHOLDER : IZAKAYA_PLACEHOLDER;
+  const renderMapPanel = () => (
+    <MapPanel
+      candidates={allCandidates}
+      selectedGoogleMapsUrl={selectedGoogleMapsUrl}
+      infoWindowVisible={infoWindowVisible}
+      onMarkerClick={handleMarkerClick}
+      onInfoWindowClose={handleInfoWindowClose}
+      userLocation={userLocation}
+    />
+  );
 
   return (
-    <div className={hasResults ? 'flex h-screen overflow-hidden' : 'min-h-screen bg-gray-100'}>
-      <div className={hasResults ? 'w-1/2 overflow-y-auto p-4' : 'max-w-3xl mx-auto px-4 py-8'}>
+    <div className={hasResults ? 'min-h-screen bg-gray-100 lg:flex lg:h-screen lg:overflow-hidden' : 'min-h-screen bg-gray-100'}>
+      <div className={hasResults ? 'p-4 lg:w-1/2 lg:overflow-y-auto' : 'max-w-3xl mx-auto px-4 py-8'}>
         <h1 className="text-3xl font-bold">Restaurant Discovery</h1>
         <ModeTabs activeTab={activeTab} onTabChange={handleTabChange} />
         <SearchInput value={query} onChange={setQuery} onSubmit={handleSearch} isLoading={isLoading} placeholder={searchPlaceholder} />
@@ -219,6 +235,22 @@ function App() {
         )}
         {recommendations !== null && recommendations.length === 0 && otherCandidates !== null && otherCandidates.length > 0 && !isLoading && error === null && (
           <p className="text-center text-gray-400">AIのおすすめは見つかりませんでしたが、その他の候補があります</p>
+        )}
+        {recommendations !== null && recommendations.length > 0 && !isLoading && (
+          <div className="my-4 lg:hidden">
+            <button
+              type="button"
+              className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-bold text-white shadow"
+              onClick={() => setIsMobileMapVisible((visible) => !visible)}
+            >
+              {isMobileMapVisible ? '地図を閉じる' : '地図を表示'}
+            </button>
+          </div>
+        )}
+        {hasResults && isMobileMapVisible && (
+          <div className="mb-4 h-[70vh] overflow-hidden rounded-xl border border-gray-200 lg:hidden">
+            {renderMapPanel()}
+          </div>
         )}
         {recommendations !== null && recommendations.length > 0 && !isLoading && (
           <RecommendationList
@@ -242,15 +274,8 @@ function App() {
         )}
       </div>
       {hasResults && (
-        <div className="w-1/2 h-full">
-          <MapPanel
-            candidates={allCandidates}
-            selectedGoogleMapsUrl={selectedGoogleMapsUrl}
-            infoWindowVisible={infoWindowVisible}
-            onMarkerClick={handleMarkerClick}
-            onInfoWindowClose={handleInfoWindowClose}
-            userLocation={userLocation}
-          />
+        <div className="hidden h-full lg:block lg:w-1/2">
+          {renderMapPanel()}
         </div>
       )}
     </div>
